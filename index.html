@@ -7,10 +7,10 @@
 	<body style="margin:0px; overflow:hidden;">
 		<canvas id="planet-creator" style="position:absolute;top:0px;left:0px;"></canvas>
 		<div id="controls" style="position:absolute;top:0px;right:0px;" data-target="">
-			<h3></h3>
-			<input name="feetPerPixel" type="number" placeholder="feet per pixel"/><br/>
-			<input name="coordinates_x" type="number" placeholder="X offset (ft)"/><br/>
-			<input name="coordinates_y" type="number" placeholder="Y offset (ft)"/>
+			<h3 id="name"></h3>
+			<input id="feetPerPixel" type="number" placeholder="feet per pixel"/><br/>
+			<input id="coordinates_x" type="number" placeholder="X offset (ft)"/><br/>
+			<input id="coordinates_y" type="number" placeholder="Y offset (ft)"/>
 		</div>
 		<script type="text/javascript">require('./renderer.js');</script>
 	</body>

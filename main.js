@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, MenuItem } = require('electron');
+const { app, BrowserWindow, Menu, MenuItem, ipcMain } = require('electron');
 
 let win;
 
@@ -33,19 +33,19 @@ function createWindow()
 		label: "Open...",
 		accelerator: "CommandOrControl+O",
 		type: "normal",
-		click: () => {win.webContents.executeJavaScript("window.fileOpen();");},
+		click: () => {win.webContents.executeJavaScript("window.fileOpen();").then(console.log);},
 	}));
 	fileMenu.submenu.append(new MenuItem({
 		label: "Save",
 		accelerator: "CommandOrControl+S",
 		type: "normal",
-		click: () => {win.webContents.executeJavaScript("window.world.save('map');");},
+		click: () => {win.webContents.executeJavaScript("window.world.save('map');").then(console.log);},
 	}));
 	fileMenu.submenu.append(new MenuItem({
 		label: "Add Image",
 		accelerator: "CommandOrControl+A",
 		type: "normal",
-		click: () => {win.webContents.executeJavaScript("window.fileImageAdd();");},
+		click: () => {win.webContents.executeJavaScript("window.fileImageAdd();").then(console.log);},
 	}));
 	fileMenu.submenu.append(new MenuItem({
 		label: "Exit",

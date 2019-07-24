@@ -1,3 +1,4 @@
+const { ipcRenderer } = require('electron');
 const fs = require('fs');
 const fileDialog = require('file-dialog');
 
@@ -6,6 +7,7 @@ window.fileOpen = function()
 	fileDialog({accept:"application/json"}).then(files => {
 		window.world.load(files.item(0).path);
 	});
+	return window.world;
 }
 
 window.fileImageAdd = function()
@@ -14,6 +16,7 @@ window.fileImageAdd = function()
 		for(var i=0; i<files.length; i++)
 			window.world.addMapImage(new MapImage(files.item(i).path, [0,0], world.feetPerPixel));
 	});
+	return window.world;
 }
 
 function WorldMap(coordinates, feetPerPixel)
@@ -26,6 +29,15 @@ function WorldMap(coordinates, feetPerPixel)
 	this.ctx = this.canvas.getContext("2d");
 	this.delayDraw = 0;
 	this.mapImageSelected = null;
+	
+	this.updateSelected = (function(event)
+	{
+		if(this.mapImageSelected != null)
+		{
+			this.mapImageSelected.updateProperties();
+			this.draw();
+		}
+	}).bind(this);
 	
 	this.resize = (function()
 	{
@@ -144,6 +156,7 @@ function WorldMap(coordinates, feetPerPixel)
 			if(err)
 				console.error(err);
 		});
+		return this;
 	}
 	
 	this.canvas.onmousedown = (function(event){
@@ -156,13 +169,20 @@ function WorldMap(coordinates, feetPerPixel)
 				console.log(options);
 				for(var i=0; i<options.length; i++)
 				{
-					switch(options.item(i).name)
+					var id = options.item(i).id;
+					switch(id)
 					{
 						case "feetPerPixel":
+							options.item(i).value = this.mapImageSelected.feetPerPixel;
 							break;
 						case "coordinates_x":
+							options.item(i).value = this.mapImageSelected.coordinates[0];
 							break;
 						case "coordinates_y":
+							options.item(i).value = this.mapImageSelected.coordinates[1];
+							break;
+						case "name":
+							options.item(i).innerHTML = this.mapImageSelected.file.substr(this.mapImageSelected.file.lastIndexOf("\\"));
 							break;
 					}
 				}
@@ -177,11 +197,14 @@ function WorldMap(coordinates, feetPerPixel)
 		}
 		else if(event.which == 1 && this.mapImageSelected != null)
 		{
-			//this.mapImageSelected.scroll(event.movementX, event.movementY, this);
+			this.mapImageSelected.scroll(event.movementX, event.movementY, this);
 		}
 	}).bind(this);
 	
 	this.canvas.onwheel = this.changeZoom;
+	document.getElementById("feetPerPixel").addEventListener("change", this.updateSelected);
+	document.getElementById("coordinates_x").addEventListener("change", this.updateSelected);
+	document.getElementById("coordinates_y").addEventListener("change", this.updateSelected);
 	//this.canvas.onkeydown = logevent;
 }
 
@@ -251,6 +274,14 @@ function MapImage(file, coordinates, feetPerPixel)
 		this.coordinates[0] += movementX * worldMap.feetPerPixel;
 		this.coordinates[1] += movementY * worldMap.feetPerPixel;
 		worldMap.draw();
+	}).bind(this);
+	
+	this.updateProperties = (function(event)
+	{
+		this.controls = document.getElementById("controls");
+		this.feetPerPixel = document.getElementById("feetPerPixel").value;
+		this.coordinates[0] = document.getElementById("coordinates_x").value;
+		this.coordinates[1] = document.getElementById("coordinates_y").value;
 	}).bind(this);
 }
 
