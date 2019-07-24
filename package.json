@@ -1,0 +1,23 @@
+{
+	"name": "planet-creator",
+	"description": "An application for creating TTRPG worlds, from the macro scale of oceans and landmasses, to the micro scale of individual 5ft-square-grid maps.",
+	"version": "0.0.0",
+	"homepage": "https://github.com/kree-nickm/planet-creator",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kree-nickm/planet-creator.git"
+	},
+	"main": "main.js",
+	"scripts": {
+		"start": "electron ."
+	},
+	"dependencies": {
+		"file-dialog": "0.0.7"
+	},
+	"engines": {
+		"node": "10.x"
+	},
+	"devDependencies": {
+		"electron": "^5.0.7"
+	}
+}
