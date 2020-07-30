@@ -12,12 +12,12 @@
 		"start": "electron ."
 	},
 	"dependencies": {
-		"file-dialog": "0.0.7"
+		"file-dialog": "^0.0.8"
 	},
 	"engines": {
-		"node": "10.x"
+		"node": "12.x"
 	},
 	"devDependencies": {
-		"electron": "^5.0.7"
+		"electron": "^9.1.2"
 	}
 }
