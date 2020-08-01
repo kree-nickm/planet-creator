@@ -1,31 +1,153 @@
 const { ipcRenderer } = require('electron');
 const fs = require('fs');
-const fileDialog = require('file-dialog');
 
-window.fileOpen = function()
-{
-	fileDialog({accept:"application/json"}).then(files => {
-		window.world.load(files.item(0).path);
+// TODO: These first two will need to be re-done when the class declaration is moved out of here.
+ipcRenderer.on("openMap", (event, mapJSON) => {
+	window.world.load(mapJSON);
+});
+
+ipcRenderer.on("openMapImages", (event, imageFiles) => {
+	for(let i in imageFiles)
+		window.world.addMapImage(new MapImage(imageFiles[i], [0,0], window.world.feetPerPixel));
+});
+
+// TODO: See if BrowserView is better for this?
+ipcRenderer.on("setView", (event, view) => {
+	let viewElements = document.querySelectorAll(".view");
+	viewElements.forEach((node, idx, list) => {
+		if(node.id == view +"View")
+		{
+			if(!node.classList.contains("view-selected"))
+				node.classList.add("view-selected");
+		}
+		else if(node.classList.contains("view-selected"))
+			node.classList.remove("view-selected");
 	});
-	return window.world;
+});
+
+ipcRenderer.on("listArticles", (event, articleList) => {
+	articleList.sort(sortByTitle);
+	let sidebar = document.getElementById("articlesSidebar");
+	// Reset existing.
+	while(sidebar.hasChildNodes())
+		sidebar.removeChild(sidebar.firstChild);
+	// Add 'Create New'.
+	let link = document.createElement("a");
+	link.href = "#";
+	link.innerHTML = "Create New...";
+	sidebar.appendChild(link);
+	link.addEventListener("click", (event) => {
+		addArticleFields({});
+	});
+	// Add all the articles.
+	for(let i in articleList)
+	{
+		let link = document.createElement("a");
+		link.href = "#"+ articleList[i].id;
+		if(articleList[i].title)
+			link.innerHTML = articleList[i].title;
+		else
+			link.innerHTML = articleList[i].id;
+		sidebar.appendChild(link);
+		link.addEventListener("click", (event) => {
+			ipcRenderer.send("loadArticle", event.target.hash.substring(1));
+		});
+	}
+});
+
+ipcRenderer.on("loadArticle", (event, data) => {
+	addArticleFields(data);
+});
+
+const stringCollator = new Intl.Collator("en");
+function sortByTitle(a, b) {
+	if(!a.title && !b.title)
+		return 0;
+	else if(!a.title)
+		return 1;
+	else if(!b.title)
+		return -1;
+	else
+		return stringCollator.compare(a.title, b.title);
 }
 
-window.fileImageAdd = function()
+function addArticleFields(data)
 {
-	fileDialog({multiple:true, accept:"image/*"}).then(files => {
-		for(var i=0; i<files.length; i++)
-			window.world.addMapImage(new MapImage(files.item(i).path, [0,0], world.feetPerPixel));
+	let content = document.getElementById("articlesContent");
+	while(content.hasChildNodes())
+		content.removeChild(content.firstChild);
+	// TODO: Add fields based on templates.
+	let templates = {
+		'*': {
+			id: {
+				type: "hidden",
+				onlyIfSet: true,
+			},
+			title: {
+				type: "text",
+				description: "Article Title",
+			},
+			content: {
+				type: "textarea",
+				description: "Article Content",
+			},
+		}
+	};
+	for(let t in templates)
+	{
+		for(let f in templates[t])
+		{
+			if(templates[t][f].onlyIfSet && !data[f])
+				continue;
+			
+			let elem;
+			if(templates[t][f].type == "textarea")
+			{
+				elem = document.createElement("textarea");
+			}
+			else
+			{
+				elem = document.createElement("input");
+				elem.type = templates[t][f].type ? templates[t][f].type : "text";
+			}
+			elem.name = f;
+			if(data[f])
+			{
+				elem.defaultValue = data[f];
+				elem.value = data[f];
+			}
+			if(templates[t][f].description)
+				elem.placeholder = templates[t][f].description;
+			elem.classList.add("articleData");
+			let container = document.createElement("div");
+			container.classList.add("articleDataContainer");
+			content.appendChild(container);
+			container.appendChild(elem);
+		}
+	}
+	let save = document.createElement("input");
+	save.type = "button";
+	save.value = "Save Article";
+	content.appendChild(save);
+	save.addEventListener("click", event => {
+		let data = {};
+		let dataElements = document.querySelectorAll(".articleData");
+		dataElements.forEach((node, idx, list) => {
+			if(node.value != "")
+				data[node.name] = node.value;
+		});
+		ipcRenderer.send("saveArticle", data);
 	});
-	return window.world;
 }
 
+// TODO: Move this out of here into its own file.
 function WorldMap(coordinates, feetPerPixel)
 {
 	this.coordinates = coordinates;
 	this.feetPerPixel = feetPerPixel;
 	this.mapImages = [];
-	this.controls = document.getElementById("controls");
-	this.canvas = document.getElementById("planet-creator");
+	this.controls = document.getElementById("mapImageControls");
+	this.canvas = document.getElementById("mapCanvas");
 	this.ctx = this.canvas.getContext("2d");
 	this.delayDraw = 0;
 	this.mapImageSelected = null;
@@ -121,9 +243,8 @@ function WorldMap(coordinates, feetPerPixel)
 		return result;
 	}
 	
-	this.load = function(file)
+	this.load = function(data)
 	{
-		var data = JSON.parse(fs.readFileSync(file));
 		this.coordinates = data.coordinates;
 		this.feetPerPixel = data.feetPerPixel;
 		this.mapImages = [];
@@ -172,16 +293,16 @@ function WorldMap(coordinates, feetPerPixel)
 					var id = options.item(i).id;
 					switch(id)
 					{
-						case "feetPerPixel":
+						case "mapImageFPP":
 							options.item(i).value = this.mapImageSelected.feetPerPixel;
 							break;
-						case "coordinates_x":
+						case "mapImageX":
 							options.item(i).value = this.mapImageSelected.coordinates[0];
 							break;
-						case "coordinates_y":
+						case "mapImageY":
 							options.item(i).value = this.mapImageSelected.coordinates[1];
 							break;
-						case "name":
+						case "mapImageName":
 							options.item(i).innerHTML = this.mapImageSelected.file.substr(this.mapImageSelected.file.lastIndexOf("\\"));
 							break;
 					}
@@ -202,9 +323,9 @@ function WorldMap(coordinates, feetPerPixel)
 	}).bind(this);
 	
 	this.canvas.onwheel = this.changeZoom;
-	document.getElementById("feetPerPixel").addEventListener("change", this.updateSelected);
-	document.getElementById("coordinates_x").addEventListener("change", this.updateSelected);
-	document.getElementById("coordinates_y").addEventListener("change", this.updateSelected);
+	document.getElementById("mapImageFPP").addEventListener("change", this.updateSelected);
+	document.getElementById("mapImageX").addEventListener("change", this.updateSelected);
+	document.getElementById("mapImageY").addEventListener("change", this.updateSelected);
 	//this.canvas.onkeydown = logevent;
 }
 
@@ -278,17 +399,17 @@ function MapImage(file, coordinates, feetPerPixel)
 	
 	this.updateProperties = (function(event)
 	{
-		this.controls = document.getElementById("controls");
-		this.feetPerPixel = document.getElementById("feetPerPixel").value;
-		this.coordinates[0] = document.getElementById("coordinates_x").value;
-		this.coordinates[1] = document.getElementById("coordinates_y").value;
+		this.controls = document.getElementById("mapImageControls");
+		this.feetPerPixel = document.getElementById("mapImageFPP").value;
+		this.coordinates[0] = document.getElementById("mapImageX").value;
+		this.coordinates[1] = document.getElementById("mapImageY").value;
 	}).bind(this);
 }
 
 window.world = new WorldMap([0,0], 2112);
 window.world.resize();
 window.onresize = window.world.resize;
-window.world.load("saved/map.json");
+//window.world.load("saved/map.json");
 
 /*var continent = new MapImage("images/worldmap.png", [0,0], 2112);
 window.world.addMapImage(continent);

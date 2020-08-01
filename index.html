@@ -2,16 +2,31 @@
 <html>
 	<head>
 		<meta charset="UTF-8"/>
+		<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'">
+		<meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'">
 		<title>Planet Creator</title>
+		<link rel="stylesheet" href="css.css"/>
 	</head>
-	<body style="margin:0px; overflow:hidden;">
-		<canvas id="planet-creator" style="position:absolute;top:0px;left:0px;"></canvas>
-		<div id="controls" style="position:absolute;top:0px;right:0px;" data-target="">
-			<h3 id="name"></h3>
-			<input id="feetPerPixel" type="number" placeholder="feet per pixel"/><br/>
-			<input id="coordinates_x" type="number" placeholder="X offset (ft)"/><br/>
-			<input id="coordinates_y" type="number" placeholder="Y offset (ft)"/>
+	<body>
+		<div id="articlesView" class="view">
+			<div id="articlesSidebar">
+			</div>
+			<div id="articlesContent">
+			</div>
+			<div id="articlesDivider">
+			</div>
 		</div>
-		<script type="text/javascript">require('./renderer.js');</script>
+		
+		<div id="mapView" class="view">
+			<canvas id="mapCanvas"></canvas>
+			<div id="mapImageControls">
+				<h3 id="mapImageName"></h3>
+				<input id="mapImageFPP" type="number" placeholder="feet per pixel"/><br/>
+				<input id="mapImageX" type="number" placeholder="X offset (ft)"/><br/>
+				<input id="mapImageY" type="number" placeholder="Y offset (ft)"/>
+			</div>
+		</div>
+		
+		<script src="./renderer.js"></script>
 	</body>
 </html>

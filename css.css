@@ -1,0 +1,101 @@
+body {
+	font-family: Tahoma, Arial, sans-serif;
+	margin: 0px;
+	overflow: hidden;
+}
+
+/*
+	View Definitions
+*/
+
+.view {
+	display: none;
+}
+
+.view.view-selected {
+	display: block;
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+	box-sizing: border-box;
+}
+
+/*
+	Articles View
+*/
+
+#articlesSidebar {
+	display: block;
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	width: 30ex;
+	bottom: 0px;
+	padding: 0.5ex 1ex;
+	box-sizing: border-box;
+}
+
+#articlesSidebar a {
+	display: block;
+}
+
+#articlesDivider {
+	display: block;
+	position: absolute;
+	top: 0px;
+	left: calc(30ex - 1px);
+	width: 3px;
+	bottom: 0px;
+	box-sizing: border-box;
+}
+
+#articlesContent {
+	display: block;
+	position: absolute;
+	top: 0px;
+	left: calc(30ex + 1px);
+	right: 0px;
+	bottom: 0px;
+	padding: 0.5ex 1ex;
+	box-sizing: border-box;
+}
+
+div.articleDataContainer {
+	display: block;
+	box-sizing: border-box;
+}
+
+input[type='text'].articleData {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+textarea.articleData {
+	display: block;
+	height: 10em;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+/*
+	Map View
+*/
+
+#mapCanvas {
+	position: absolute;
+	top: 0px;
+	bottom: 0px;
+	left: 0px;
+	box-sizing: border-box;
+}
+
+#mapImageControls {
+	position: absolute;
+	top: 0px;
+	bottom: 0px;
+	right: 0px;
+	box-sizing: border-box;
+}

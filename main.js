@@ -1,51 +1,220 @@
-const { app, BrowserWindow, Menu, MenuItem, ipcMain } = require('electron');
+"use strict";
+const { app, BrowserWindow, Menu, MenuItem, dialog, ipcMain } = require('electron');
+const fs = require('fs');
+const DataManager = require('./DataManager.js');
 
-let win;
+const database = new DataManager();
+const appWindows = [];
 
-function createWindow()
+app.whenReady().then(() => {
+	createWindow();
+	app.on("activate", function(){
+		if(appWindows[0] === null)
+			createWindow();
+	});
+}).catch(console.error);
+
+app.on("window-all-closed", () => {
+	if(process.platform !== "darwin")
+		app.quit();
+});
+
+ipcMain.on("saveArticle", async (event, data) => {
+	if(database.index)
+	{
+		if(await database.saveArticle(data, (data.id != "")))
+		{
+			sendArticles();
+		}
+	}
+	else
+	{
+		showMessage({
+			type: "error",
+			title: "Failed to Save Article",
+			message: "The database for your setting has not been loaded.",
+		});
+	}
+});
+
+ipcMain.on("loadArticle", async (event, id) => {
+	if(database.index)
+	{
+		let data = await database.loadArticle(id)
+		data.id = id;
+		appWindows[0].webContents.send("loadArticle", data);
+	}
+	else
+	{
+		showMessage({
+			type: "error",
+			title: "Failed to Load Article",
+			message: "The database for your setting has not been loaded.",
+		});
+	}
+});
+
+function sendArticles()
 {
-	win = new BrowserWindow({
+	if(database.index && appWindows[0])
+	{
+		let articleList = [];
+		for(let i in database.index)
+		{
+			let article = {};
+			article.id = i;
+			article.title = database.index[i].t;
+			articleList.push(article);
+		}
+		appWindows[0].webContents.send("listArticles", articleList);
+	}
+	else
+	{
+		showMessage({
+			type: "error",
+			title: "Failed to Display Articles",
+			message: "The database for your setting has not been loaded, or there is no GUI window loaded.",
+		});
+	}
+}
+
+async function showMessage(props)
+{
+	switch(props.type)
+	{
+		case "error":
+			console.error(props);
+			break;
+		case "warning":
+			console.warn(props);
+			break;
+		default:
+			console.log(props);
+	}
+	if(appWindows[0])
+		return await dialog.showMessageBox(appWindows[0], props);
+	else
+		return null;
+}
+
+async function createWindow()
+{
+	appWindows[0] = new BrowserWindow({
 		width: 1500,
 		height: 1050,
 		webPreferences: {
-			nodeIntegration: true
+			nodeIntegration: true,
+			//preload: path.join(__dirname, 'preload.js')
 		}
 	});
 
-	win.loadFile("index.html");
-	//win.webContents.openDevTools();
-	win.on("closed", () => {
-		// Dereference the window object, usually you would store windows
-		// in an array if your app supports multi windows, this is the time
-		// when you should delete the corresponding element.
-		win = null;
+	appWindows[0].loadFile("index.html");
+	appWindows[0].on("closed", () => {
+		for(let i in appWindows)
+			appWindows[i] = null;
 	});
 	
-	var menu = new Menu();
+	let menu = new Menu();
 	
-	var fileMenu = new MenuItem({
+	let fileMenu = new MenuItem({
 		label: "File",
 		accelerator: "Alt+F",
 		type: "submenu",
 		submenu: new Menu(),
 	});
 	fileMenu.submenu.append(new MenuItem({
-		label: "Open...",
+		label: "Open Setting...",
 		accelerator: "CommandOrControl+O",
 		type: "normal",
-		click: () => {win.webContents.executeJavaScript("window.fileOpen();").then(console.log);},
+		click: async function(){
+			let selection = await dialog.showOpenDialog(appWindows[0], {
+				title: "Select Setting Directory...",
+				properties: ["openDirectory","createDirectory","promptToCreate"],
+			});
+			if(!selection.canceled)
+			{
+				await database.init(selection.filePaths[0]);
+				sendArticles();
+			}
+		},
 	}));
 	fileMenu.submenu.append(new MenuItem({
-		label: "Save",
+		label: "Open Map...",
+		accelerator: "CommandOrControl+M",
+		type: "normal",
+		click: async function(){
+			let selection = await dialog.showOpenDialog(appWindows[0], {
+				title: "Open Map...",
+				properties: ["openFile"],
+				filters: [
+					{name:"JSON", extensions:["json"]},
+					{name:"All Files", extensions:["*"]},
+				],
+			});
+			if(!selection.canceled)
+			{
+				try
+				{
+					let mapJSON = JSON.parse(await fs.promises.readFile(selection.filePaths[0]));
+					if(mapJSON.coordinates && mapJSON.feetPerPixel && mapJSON.mapImages)
+						appWindows[0].webContents.send("openMap", mapJSON);
+					else
+					{
+						showMessage({
+							type: "error",
+							title: "Failed to Open Map",
+							message: "The selected file is not a valid map.",
+						});
+					}
+				}
+				catch(err)
+				{
+					showMessage({
+						type: "error",
+						title: "Failed to Open Map",
+						message: "The selected file is not a valid map.",
+						detail: "The following error occurred when trying to open the file:\n" + err.toString(),
+					});
+				}
+			}
+		},
+	}));
+	fileMenu.submenu.append(new MenuItem({
+		label: "Save Map As...",
 		accelerator: "CommandOrControl+S",
 		type: "normal",
-		click: () => {win.webContents.executeJavaScript("window.world.save('map');").then(console.log);},
+		click: () => {appWindows[0].webContents.executeJavaScript("window.world.save('map');").then(console.log).catch(console.error);},
 	}));
 	fileMenu.submenu.append(new MenuItem({
-		label: "Add Image",
+		label: "Add Map Image...",
 		accelerator: "CommandOrControl+A",
 		type: "normal",
-		click: () => {win.webContents.executeJavaScript("window.fileImageAdd();").then(console.log);},
+		click: async function(){
+			let selection = await dialog.showOpenDialog(appWindows[0], {
+				title: "Open Map Image...",
+				properties: ["openFile","multiSelections"],
+				filters: [
+					{name:"Images", extensions:["jpg","jpeg","png","gif"]},
+					{name:"All Files", extensions:["*"]},
+				],
+			});
+			if(!selection.canceled)
+			{
+				try
+				{
+					appWindows[0].webContents.send("openMapImages", selection.filePaths);
+				}
+				catch(err)
+				{
+					dialog.showMessageBox(appWindows[0], {
+						type: "error",
+						title: "Failed to Open Image",
+						message: "The selected file is not a valid image.",
+						detail: "The following error occurred when trying to open the file:\n" + err.toString(),
+					});
+				}
+			}
+		},
 	}));
 	fileMenu.submenu.append(new MenuItem({
 		label: "Exit",
@@ -55,7 +224,27 @@ function createWindow()
 	}));
 	menu.append(fileMenu);
 	
-	var toolsMenu = new MenuItem({
+	let viewMenu = new MenuItem({
+		label: "View",
+		accelerator: "Alt+V",
+		type: "submenu",
+		submenu: new Menu(),
+	});
+	viewMenu.submenu.append(new MenuItem({
+		label: "Articles",
+		accelerator: "",
+		type: "normal",
+		click: () => {appWindows[0].webContents.send("setView", "articles");},
+	}));
+	viewMenu.submenu.append(new MenuItem({
+		label: "Map",
+		accelerator: "",
+		type: "normal",
+		click: () => {appWindows[0].webContents.send("setView", "map");},
+	}));
+	menu.append(viewMenu);
+	
+	let toolsMenu = new MenuItem({
 		label: "Tools",
 		accelerator: "Alt+T",
 		type: "submenu",
@@ -65,35 +254,9 @@ function createWindow()
 		label: "Dev Tools",
 		accelerator: "CommandOrControl+Shift+I",
 		type: "normal",
-		click: () => {win.webContents.openDevTools();},
+		click: () => {appWindows[0].webContents.openDevTools();},
 	}));
 	menu.append(toolsMenu);
 	
-	menu.append(new MenuItem({
-		label: "Move",
-		type: "radio",
-	}));
-	
 	Menu.setApplicationMenu(menu);
 }
-
-app.on("ready", createWindow);
-
-// Quit when all windows are closed.
-app.on("window-all-closed", () => {
-	// On macOS it is common for applications and their menu bar
-	// to stay active until the user quits explicitly with Cmd + Q
-	if(process.platform !== "darwin")
-	{
-		app.quit();
-	}
-});
-
-app.on("activate", () => {
-	// On macOS it's common to re-create a window in the app when the
-	// dock icon is clicked and there are no other windows open.
-	if(win === null)
-	{
-		createWindow();
-	}
-});
