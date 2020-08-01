@@ -1,6 +1,13 @@
 # Planet Creator (working title)
 An application for creating TTRPG campaign settings and managing all information thereof.
 
+### Installation
+1. Install [Node.js](https://nodejs.org/en/download/). Make sure it is added to PATH or the below command won't work without tweaks.
+2. Clone this repository into a directory of your choice, or simply download the files.
+3. In that directory, run the command `npm install` to automatically install all of the Node.js dependencies.
+4. Run the command `npm start` to start the application.
+
+### Design Document
 This is a loose design document for the features that are planned. Crossed-out items are effectively completed, though may still be tweaked.
 * Add images for maps.
    * Allow map variations.
