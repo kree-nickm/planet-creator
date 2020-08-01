@@ -2,6 +2,7 @@
 const { app, BrowserWindow, Menu, MenuItem, dialog, ipcMain } = require('electron');
 const fs = require('fs');
 const DataManager = require('./DataManager.js');
+const md = require('markdown-it')();
 
 const database = new DataManager();
 const appWindows = [];
@@ -37,11 +38,53 @@ ipcMain.on("saveArticle", async (event, data) => {
 	}
 });
 
-ipcMain.on("loadArticle", async (event, id) => {
+ipcMain.on("loadArticle", async (event, findData) => {
 	if(database.index)
 	{
-		let data = await database.loadArticle(id)
-		data.id = id;
+		let data;
+		if(findData.id)
+		{
+			data = await database.loadArticle(findData.id)
+			data.id = findData.id;
+			let templates = {
+				'*': {
+					id: {
+						type: "hidden",
+						onlyIfSet: true,
+					},
+					title: {
+						type: "text",
+						description: "Article Title",
+					},
+					content: {
+						type: "textarea",
+						description: "Article Content",
+						useMarkdown: true,
+					},
+				}
+			};
+			for(let t in templates)
+			{
+				for(let f in templates[t])
+				{
+					if(templates[t][f].useMarkdown && data[f])
+					{
+						data[f+":Markdown"] = md.render(data[f].replace(/\[\[(.*?)]]/g, (match,p1,offset,string) => {
+							for(let i in database.index)
+							{
+								if(typeof(database.index[i].t) == "string" && database.index[i].t.toLowerCase() == p1.toLowerCase())
+								{
+									return "["+ p1 +"](#"+ i +")";
+								}
+							}
+							return "["+ p1 +"](##"+ database.convertToID(p1) +")";
+						}));
+					}
+				}
+			}
+		}
+		else
+			data = findData;
 		appWindows[0].webContents.send("loadArticle", data);
 	}
 	else

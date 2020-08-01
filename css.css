@@ -4,6 +4,10 @@ body {
 	overflow: hidden;
 }
 
+a.broken {
+	color: red;
+}
+
 /*
 	View Definitions
 */
@@ -62,18 +66,37 @@ body {
 	box-sizing: border-box;
 }
 
-div.articleDataContainer {
+.articleDataContainer {
 	display: block;
 	box-sizing: border-box;
 }
 
-input[type='text'].articleData {
+.articleDataContainer:not(.reading) .articleDataRead {
+	display: none;
+}
+
+.articleDataContainer.reading .articleDataRead {
 	display: block;
 	width: 100%;
 	box-sizing: border-box;
 }
 
-textarea.articleData {
+.articleDataRead .edit {
+	display: inline-block;
+	float: right;
+}
+
+.articleDataContainer:not(.editing) .articleDataEdit {
+	display: none;
+}
+
+.articleDataContainer.editing input[type='text'].articleDataEdit {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.articleDataContainer.editing textarea.articleDataEdit {
 	display: block;
 	height: 10em;
 	width: 100%;

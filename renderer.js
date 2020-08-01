@@ -26,20 +26,18 @@ ipcRenderer.on("setView", (event, view) => {
 });
 
 ipcRenderer.on("listArticles", (event, articleList) => {
-	articleList.sort(sortByTitle);
 	let sidebar = document.getElementById("articlesSidebar");
 	// Reset existing.
 	while(sidebar.hasChildNodes())
 		sidebar.removeChild(sidebar.firstChild);
-	// Add 'Create New'.
+	// Add 'Create New'
 	let link = document.createElement("a");
 	link.href = "#";
 	link.innerHTML = "Create New...";
 	sidebar.appendChild(link);
-	link.addEventListener("click", (event) => {
-		addArticleFields({});
-	});
+	link.addEventListener("click", handleArticleLink);
 	// Add all the articles.
+	articleList.sort(sortByTitle);
 	for(let i in articleList)
 	{
 		let link = document.createElement("a");
@@ -49,15 +47,24 @@ ipcRenderer.on("listArticles", (event, articleList) => {
 		else
 			link.innerHTML = articleList[i].id;
 		sidebar.appendChild(link);
-		link.addEventListener("click", (event) => {
-			ipcRenderer.send("loadArticle", event.target.hash.substring(1));
-		});
+		link.addEventListener("click", handleArticleLink);
 	}
 });
 
 ipcRenderer.on("loadArticle", (event, data) => {
 	addArticleFields(data);
 });
+
+function handleArticleLink(event)
+{
+	let hash = event.target.hash;
+	if(hash == "#")
+		ipcRenderer.send("loadArticle", {});
+	else if(hash.startsWith("##"))
+		ipcRenderer.send("loadArticle", {title:event.target.innerHTML});
+	else
+		ipcRenderer.send("loadArticle", {id:hash.substring(1)});
+}
 
 const stringCollator = new Intl.Collator("en");
 function sortByTitle(a, b) {
@@ -90,6 +97,7 @@ function addArticleFields(data)
 			content: {
 				type: "textarea",
 				description: "Article Content",
+				useMarkdown: true,
 			},
 		}
 	};
@@ -100,29 +108,71 @@ function addArticleFields(data)
 			if(templates[t][f].onlyIfSet && !data[f])
 				continue;
 			
-			let elem;
+			let container = document.createElement("div");
+			container.classList.add("articleDataContainer", "reading");
+			content.appendChild(container);
+			
+			// Setup edit box.
+			let editElem;
 			if(templates[t][f].type == "textarea")
 			{
-				elem = document.createElement("textarea");
+				editElem = document.createElement("textarea");
 			}
 			else
 			{
-				elem = document.createElement("input");
-				elem.type = templates[t][f].type ? templates[t][f].type : "text";
+				editElem = document.createElement("input");
+				editElem.type = templates[t][f].type ? templates[t][f].type : "text";
 			}
-			elem.name = f;
+			editElem.name = f;
 			if(data[f])
 			{
-				elem.defaultValue = data[f];
-				elem.value = data[f];
+				editElem.defaultValue = data[f];
+				editElem.value = data[f];
 			}
 			if(templates[t][f].description)
-				elem.placeholder = templates[t][f].description;
-			elem.classList.add("articleData");
-			let container = document.createElement("div");
-			container.classList.add("articleDataContainer");
-			content.appendChild(container);
-			container.appendChild(elem);
+				editElem.placeholder = templates[t][f].description;
+			editElem.classList.add("articleDataEdit");
+			editElem.templateProperties = templates[t][f];
+			container.appendChild(editElem);
+			
+			// Setup read box.
+			if(editElem.type != "hidden")
+			{
+				let readElem = document.createElement("div");
+				let readText = document.createElement("span");
+				if(data[f])
+				{
+					if(editElem.templateProperties.useMarkdown)
+					{
+						readText.innerHTML = data[f+":Markdown"];
+						let links = readText.querySelectorAll("a[href^='#']");
+						links.forEach((node, idx, list) => {
+							node.addEventListener("click", handleArticleLink);
+							if(node.hash.startsWith("##"))
+								node.classList.add("broken");
+						});
+					}
+					else
+						readText.innerHTML = data[f];
+				}
+				else
+				{
+					readText.innerHTML = "";
+					container.classList.add("editing");
+					container.classList.remove("reading");
+				}
+				let editButton = document.createElement("button");
+				editButton.innerHTML = "edit";
+				editButton.classList.add("edit");
+				readElem.appendChild(editButton);
+				readElem.appendChild(readText);
+				editButton.addEventListener("click", ((event) => {
+					container.classList.add("editing");
+					container.classList.remove("reading");
+				}).bind(container));
+				readElem.classList.add("articleDataRead");
+				container.appendChild(readElem);
+			}
 		}
 	}
 	let save = document.createElement("input");
@@ -131,7 +181,7 @@ function addArticleFields(data)
 	content.appendChild(save);
 	save.addEventListener("click", event => {
 		let data = {};
-		let dataElements = document.querySelectorAll(".articleData");
+		let dataElements = document.querySelectorAll(".articleDataEdit");
 		dataElements.forEach((node, idx, list) => {
 			if(node.value != "")
 				data[node.name] = node.value;
