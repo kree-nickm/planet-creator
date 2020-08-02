@@ -6,8 +6,12 @@ const md = require('markdown-it')();
 
 const database = new DataManager();
 const appWindows = [];
+const prefs = {};
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+	let prefsTemp = await database.loadJSON("prefs.json");
+	for(let i in prefsTemp)
+		prefs[i] = prefsTemp[i];
 	createWindow();
 	app.on("activate", function(){
 		if(appWindows[0] === null)
@@ -46,33 +50,21 @@ ipcMain.on("loadArticle", async (event, findData) => {
 		{
 			data = await database.loadArticle(findData.id)
 			data.id = findData.id;
-			let templates = {
-				'*': {
-					id: {
-						type: "hidden",
-						onlyIfSet: true,
-					},
-					title: {
-						type: "text",
-						description: "Article Title",
-					},
-					content: {
-						type: "textarea",
-						description: "Article Content",
-						useMarkdown: true,
-					},
-				}
-			};
-			for(let t in templates)
+			if(!data.categories)
+				data.categories = [];
+			data.categories.unshift("*");
+			for(let c in data.categories)
 			{
-				for(let f in templates[t])
+				let categoryData = database.loadCategory(data.categories[c]);
+				categoryData.id = data.categories[c];
+				for(let f in categoryData.f)
 				{
-					if(templates[t][f].useMarkdown && data[f])
+					if(categoryData.f[f].m && data[f])
 					{
 						data[f+":Markdown"] = md.render(data[f].replace(/\[\[(.*?)]]/g, (match,p1,offset,string) => {
-							for(let i in database.index)
+							if(database.index.articleIndex) for(let i in database.index.articleIndex)
 							{
-								if(typeof(database.index[i].t) == "string" && database.index[i].t.toLowerCase() == p1.toLowerCase())
+								if(typeof(database.index.articleIndex[i].t) == "string" && database.index.articleIndex[i].t.toLowerCase() == p1.toLowerCase())
 								{
 									return "["+ p1 +"](#"+ i +")";
 								}
@@ -81,11 +73,14 @@ ipcMain.on("loadArticle", async (event, findData) => {
 						}));
 					}
 				}
+				data.categories[c] = categoryData;
 			}
 		}
 		else
 			data = findData;
 		appWindows[0].webContents.send("loadArticle", data);
+		prefs.lastArticle = data;
+		database.saveJSON("prefs.json", prefs);
 	}
 	else
 	{
@@ -97,19 +92,53 @@ ipcMain.on("loadArticle", async (event, findData) => {
 	}
 });
 
+ipcMain.on("loadCategory", async (event, findData) => {
+	if(database.index)
+	{
+		let data;
+		if(findData.id)
+		{
+			data = await database.loadCategory(findData.id)
+			data.id = findData.id;
+		}
+		else
+			data = findData;
+		appWindows[0].webContents.send("loadCategory", data);
+		prefs.lastCategory = data;
+		database.saveJSON("prefs.json", prefs);
+	}
+	else
+	{
+		showMessage({
+			type: "error",
+			title: "Failed to Load Category",
+			message: "The database for your setting has not been loaded.",
+		});
+	}
+});
+
 function sendArticles()
 {
 	if(database.index && appWindows[0])
 	{
-		let articleList = [];
-		for(let i in database.index)
+		let list = {
+			articles: [],
+			categories: [],
+		};
+		if(database.index.articleIndex) for(let i in database.index.articleIndex)
 		{
 			let article = {};
 			article.id = i;
-			article.title = database.index[i].t;
-			articleList.push(article);
+			article.title = database.index.articleIndex[i].t;
+			list.articles.push(article);
 		}
-		appWindows[0].webContents.send("listArticles", articleList);
+		if(database.index.categoryIndex) for(let i in database.index.categoryIndex)
+		{
+			let category = {};
+			category.id = i;
+			list.categories.push(category);
+		}
+		appWindows[0].webContents.send("listArticles", list);
 	}
 	else
 	{
@@ -156,6 +185,21 @@ async function createWindow()
 		for(let i in appWindows)
 			appWindows[i] = null;
 	});
+	appWindows[0].webContents.on("dom-ready", async () => {
+		if(prefs.lastSetting)
+		{
+			await database.init(prefs.lastSetting);
+			sendArticles();
+		}
+		if(prefs.lastView)
+		{
+			appWindows[0].webContents.send("setView", prefs.lastView);
+		}
+		if(prefs.lastArticle)
+		{
+			appWindows[0].webContents.send("loadArticle", prefs.lastArticle);
+		}
+	});
 	
 	let menu = new Menu();
 	
@@ -178,6 +222,8 @@ async function createWindow()
 			{
 				await database.init(selection.filePaths[0]);
 				sendArticles();
+				prefs.lastSetting = selection.filePaths[0];
+				database.saveJSON("prefs.json", prefs);
 			}
 		},
 	}));
@@ -277,13 +323,31 @@ async function createWindow()
 		label: "Articles",
 		accelerator: "",
 		type: "normal",
-		click: () => {appWindows[0].webContents.send("setView", "articles");},
+		click: () => {
+			appWindows[0].webContents.send("setView", "articles");
+			prefs.lastView = "articles";
+			database.saveJSON("prefs.json", prefs);
+		},
+	}));
+	viewMenu.submenu.append(new MenuItem({
+		label: "Categories",
+		accelerator: "",
+		type: "normal",
+		click: () => {
+			appWindows[0].webContents.send("setView", "categories");
+			prefs.lastView = "categories";
+			database.saveJSON("prefs.json", prefs);
+		},
 	}));
 	viewMenu.submenu.append(new MenuItem({
 		label: "Map",
 		accelerator: "",
 		type: "normal",
-		click: () => {appWindows[0].webContents.send("setView", "map");},
+		click: () => {
+			appWindows[0].webContents.send("setView", "map");
+			prefs.lastView = "map";
+			database.saveJSON("prefs.json", prefs);
+		},
 	}));
 	menu.append(viewMenu);
 	

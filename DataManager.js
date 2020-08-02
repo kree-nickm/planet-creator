@@ -29,11 +29,6 @@ module.exports = function(){
 				await fs.promises.writeFile(file, "{}");
 				return {};
 			}
-			else if(err.name == "SyntaxError" && err.message.indexOf("JSON") > -1)
-			{
-				console.error("Failed to parse '"+ file +"'. Error message was '"+ err.message +"'. At this time, the only recourse is to try to correct this JSON error yourself within the file and restart the application. In future versions, it will be possible to rebuild this file automatically. Full error details follow...");
-				throw err;
-			}
 			else
 				throw err;
 		}
@@ -47,7 +42,7 @@ module.exports = function(){
 		let metaData;
 		try
 		{
-			metaData = await this.loadJSON(this.index[id].f);
+			metaData = await this.loadJSON(this.index.articleIndex[id].f);
 		}
 		catch(err)
 		{
@@ -100,7 +95,7 @@ module.exports = function(){
 		if(!overwrite)
 		{
 			let inc = 2;
-			while(this.index[finalID])
+			while(this.index.articleIndex[finalID])
 			{
 				finalID = desiredID +"-"+ inc;
 				inc++;
@@ -118,7 +113,7 @@ module.exports = function(){
 		metaJSON[finalID].timeLastModified = Date.now()/1000;
 		if(!metaJSON[finalID].timeCreated)
 			metaJSON[finalID].timeCreated = metaJSON[finalID].timeLastModified;
-		this.index[finalID] = {f:metaFile,t:metaJSON[finalID].title};
+		this.index.articleIndex[finalID] = {f:metaFile,t:metaJSON[finalID].title};
 		if(metaJSON[finalID].contentFile)
 		{
 			// Check if file exists, and if we should overwrite it.
@@ -128,6 +123,10 @@ module.exports = function(){
 		await this.saveJSON(metaFile, metaJSON);
 		await this.saveJSON(this.indexFile, this.index);
 		return true;
+	};
+	
+	this.loadCategory = function(id){
+		return this.index.categoryIndex[id];
 	};
 	
 	this.convertToID = function(string){

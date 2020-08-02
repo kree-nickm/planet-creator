@@ -1,5 +1,6 @@
 images/
 data/
+prefs.json
 
 # Logs
 logs

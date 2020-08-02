@@ -104,6 +104,83 @@ a.broken {
 }
 
 /*
+	Categories View
+*/
+
+#categoriesSidebar {
+	display: block;
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	width: 30ex;
+	bottom: 0px;
+	padding: 0.5ex 1ex;
+	box-sizing: border-box;
+}
+
+#categoriesSidebar a {
+	display: block;
+}
+
+#categoriesDivider {
+	display: block;
+	position: absolute;
+	top: 0px;
+	left: calc(30ex - 1px);
+	width: 3px;
+	bottom: 0px;
+	box-sizing: border-box;
+}
+
+#categoriesContent {
+	display: block;
+	position: absolute;
+	top: 0px;
+	left: calc(30ex + 1px);
+	right: 0px;
+	bottom: 0px;
+	padding: 0.5ex 1ex;
+	box-sizing: border-box;
+}
+
+.categoryDataContainer {
+	display: block;
+	box-sizing: border-box;
+}
+
+.categoryDataContainer:not(.reading) .categoryDataRead {
+	display: none;
+}
+
+.categoryDataContainer.reading .categoryDataRead {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.categoryDataRead .edit {
+	display: inline-block;
+	float: right;
+}
+
+.categoryDataContainer:not(.editing) .categoryDataEdit {
+	display: none;
+}
+
+.categoryDataContainer.editing input[type='text'].categoryDataEdit {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.categoryDataContainer.editing textarea.categoryDataEdit {
+	display: block;
+	height: 10em;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+/*
 	Map View
 */
 
