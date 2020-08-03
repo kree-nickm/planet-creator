@@ -2,7 +2,6 @@ const { ipcRenderer } = require('electron');
 const fs = require('fs');
 const maps = require('./MapManager.js');
 
-// TODO: These first two will need to be re-done when the class declaration is moved out of here.
 ipcRenderer.on("openMap", (event, mapJSON) => {
 	window.world.load(mapJSON);
 });
@@ -87,11 +86,16 @@ function addCategories(list)
 	}
 }
 
-ipcRenderer.on("loadArticle", (event, data) => {
+ipcRenderer.on("loadArticle", (event, id, data, bonusData, categories) => {
+	data.id = id;
+	data.categories = categories;
+	for(let i in bonusData)
+		data[i] = bonusData[i];
 	addArticleFields(data);
 });
 
-ipcRenderer.on("loadCategory", (event, data) => {
+ipcRenderer.on("loadCategory", (event, id, data) => {
+	data.id = id;
 	addCategoryFields(data);
 });
 
@@ -148,7 +152,7 @@ function addArticleFields(data)
 	{
 		for(let f in data.categories[i].f)
 		{
-			if(data.categories[i].f[f].s && !data[f])
+			if(i == "*" && f == "id" && !data[f])
 				continue;
 			
 			let container = document.createElement("div");
@@ -166,7 +170,10 @@ function addArticleFields(data)
 				editElem = document.createElement("input");
 				editElem.type = data.categories[i].f[f].t ? data.categories[i].f[f].t : "text";
 			}
-			editElem.name = f;
+			if(i == "*")
+				editElem.name = f;
+			else
+				editElem.name = i +"_"+ f;
 			if(data[f])
 			{
 				editElem.defaultValue = data[f];
@@ -174,6 +181,8 @@ function addArticleFields(data)
 			}
 			if(data.categories[i].f[f].n)
 				editElem.placeholder = data.categories[i].f[f].n;
+			if(data.categories[i].f[f].d)
+				editElem.title = data.categories[i].f[f].d;
 			editElem.classList.add("articleDataEdit");
 			container.appendChild(editElem);
 			
@@ -232,9 +241,124 @@ function addArticleFields(data)
 	});
 }
 
+const categoryFieldOptions = {
+	'n': {
+		type: "text",
+		label: "Field Name",
+	},
+	't': {
+		type: "select",
+		label: "Field Type",
+		options: {
+			"text": "Single Line",
+			"textarea": "Paragraphs",
+		},
+	},
+	'm': {
+		type: "checkbox",
+		label: "Use Markdown",
+	},
+};
 function addCategoryFields(data)
 {
-	console.log(data);
+	let content = document.getElementById("categoriesContent");
+	while(content.hasChildNodes())
+		content.removeChild(content.firstChild);
+	content.appendChild(document.createElement("h1")).innerHTML = data.id;
+	for(let f in data.f)
+	{
+		if(data.id == "*" && (f == "id" || f == "title"))
+		{
+			for(let i in categoryFieldOptions)
+			{
+				let elem = content.appendChild(document.createElement("input"));
+				elem.id = f+"."+i;
+				elem.name = f+"."+i;
+				elem.type = "hidden";
+				elem.defaultValue = (data.f[f][i] ? data.f[f][i] : "");
+				elem.value = (data.f[f][i] ? data.f[f][i] : "");
+				elem.classList.add("categoryDataEdit");
+			}
+		}
+		else
+		{
+			let table = content.appendChild(document.createElement("table"));
+			table.classList.add("categoryDataContainer");
+			let tbody = table.appendChild(document.createElement("tbody"));
+			
+			// Setup edit box.
+			let caption = table.appendChild(document.createElement("caption"));
+			caption.innerHTML = f;
+			
+			for(let i in categoryFieldOptions)
+			{
+				let tr = tbody.appendChild(document.createElement("tr"));
+				let th = tr.appendChild(document.createElement("th"));
+				let label = th.appendChild(document.createElement("label"));
+				label.htmlFor = f+"."+i;
+				label.innerHTML = categoryFieldOptions[i].label+":";
+				let td = tr.appendChild(document.createElement("td"));
+				let elem;
+				if(categoryFieldOptions[i].type == "select")
+				{
+					elem = td.appendChild(document.createElement("select"));
+					for(let o in categoryFieldOptions[i].options)
+					{
+						let option = elem.appendChild(document.createElement("option"));
+						option.value = o;
+						option.innerHTML = categoryFieldOptions[i].options[o];
+					}
+					elem.value = data.f[f][i];
+				}
+				else
+				{
+					elem = td.appendChild(document.createElement("input"));
+					elem.type = categoryFieldOptions[i].type;
+					if(categoryFieldOptions[i].type == "checkbox")
+					{
+						elem.value = "1";
+						elem.checked = data.f[f][i];
+					}
+					else
+					{
+						elem.defaultValue = data.f[f][i];
+						elem.value = data.f[f][i];
+					}
+				}
+				elem.id = f+"."+i;
+				elem.name = f+"."+i;
+				elem.classList.add("categoryDataEdit");
+			}
+		}
+	}
+	let save = document.createElement("input");
+	save.type = "button";
+	save.value = "Save Category";
+	content.appendChild(save);
+	save.addEventListener("click", event => {
+		let newData = {id:data.id,f:{}};
+		let dataElements = document.querySelectorAll(".categoryDataEdit");
+		dataElements.forEach((node, idx, list) => {
+			let n = node.name.lastIndexOf(".");
+			let id = node.name.substring(0, n);
+			let name = node.name.substring(n+1);
+			if(!newData.f[id])
+				newData.f[id] = {};
+			if(node.type == "checkbox")
+			{
+				if(node.checked)
+					newData.f[id][name] = true;
+			}
+			else if(categoryFieldOptions[name].type == "checkbox")
+			{
+				if(node.value)
+					newData.f[id][name] = true;
+			}
+			else if(node.value)
+				newData.f[id][name] = node.value;
+		});
+		ipcRenderer.send("saveCategory", newData);
+	});
 }
 
 window.world = new maps.WorldMap([0,0], 2112);

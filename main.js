@@ -27,9 +27,11 @@ app.on("window-all-closed", () => {
 ipcMain.on("saveArticle", async (event, data) => {
 	if(database.index)
 	{
-		if(await database.saveArticle(data, (data.id != "")))
+		let id = data.id;
+		if(await database.saveArticle(data, (id != "")))
 		{
 			sendArticles();
+			ipcMain._events.loadArticle(event, {id:id});
 		}
 	}
 	else
@@ -47,39 +49,40 @@ ipcMain.on("loadArticle", async (event, findData) => {
 	{
 		let data;
 		if(findData.id)
-		{
-			data = await database.loadArticle(findData.id)
-			data.id = findData.id;
-			if(!data.categories)
-				data.categories = [];
-			data.categories.unshift("*");
-			for(let c in data.categories)
-			{
-				let categoryData = database.loadCategory(data.categories[c]);
-				categoryData.id = data.categories[c];
-				for(let f in categoryData.f)
-				{
-					if(categoryData.f[f].m && data[f])
-					{
-						data[f+":Markdown"] = md.render(data[f].replace(/\[\[(.*?)]]/g, (match,p1,offset,string) => {
-							if(database.index.articleIndex) for(let i in database.index.articleIndex)
-							{
-								if(typeof(database.index.articleIndex[i].t) == "string" && database.index.articleIndex[i].t.toLowerCase() == p1.toLowerCase())
-								{
-									return "["+ p1 +"](#"+ i +")";
-								}
-							}
-							return "["+ p1 +"](##"+ database.convertToID(p1) +")";
-						}));
-					}
-				}
-				data.categories[c] = categoryData;
-			}
-		}
+			data = await database.loadArticle(findData.id);
 		else
 			data = findData;
-		appWindows[0].webContents.send("loadArticle", data);
-		prefs.lastArticle = data;
+		// Don't modify `data` past this point, since it might be a reference to the saved metadata object, which we may want to reuse in its original unmodified form.
+		let categoryIDs;
+		if(Array.isArray(data.categories))
+			categoryIDs = ["*"].concat(data.categories);
+		else
+			categoryIDs = ["*"];
+		let categories = {};
+		let bonusData = {};
+		for(let c in categoryIDs)
+		{
+			let categoryData = database.loadCategory(categoryIDs[c]);
+			for(let f in categoryData.f)
+			{
+				if(categoryData.f[f].m && data[f])
+				{
+					bonusData[f+":Markdown"] = md.render(data[f].replace(/\[\[(.*?)]]/g, (match,p1,offset,string) => {
+						if(database.index.articleIndex) for(let i in database.index.articleIndex)
+						{
+							if(typeof(database.index.articleIndex[i].t) == "string" && database.index.articleIndex[i].t.toLowerCase() == p1.toLowerCase())
+							{
+								return "["+ p1 +"](#"+ i +")";
+							}
+						}
+						return "["+ p1 +"](##"+ database.convertToID(p1) +")";
+					}));
+				}
+			}
+			categories[categoryIDs[c]] = categoryData;
+		}
+		appWindows[0].webContents.send("loadArticle", (findData.id?findData.id:""), data, bonusData, categories);
+		prefs.lastArticle = findData;
 		database.saveJSON("prefs.json", prefs);
 	}
 	else
@@ -92,19 +95,37 @@ ipcMain.on("loadArticle", async (event, findData) => {
 	}
 });
 
+ipcMain.on("saveCategory", async (event, data) => {
+	if(database.index)
+	{
+		let id = data.id;
+		if(await database.saveCategory(data, (id != "")))
+		{
+			sendArticles();
+			ipcMain._events.loadCategory(event, {id:id});
+		}
+	}
+	else
+	{
+		showMessage({
+			type: "error",
+			title: "Failed to Save Article",
+			message: "The database for your setting has not been loaded.",
+		});
+	}
+});
+
 ipcMain.on("loadCategory", async (event, findData) => {
 	if(database.index)
 	{
 		let data;
 		if(findData.id)
-		{
 			data = await database.loadCategory(findData.id)
-			data.id = findData.id;
-		}
 		else
 			data = findData;
-		appWindows[0].webContents.send("loadCategory", data);
-		prefs.lastCategory = data;
+		// Don't modify `data` past this point, since it might be a reference to the saved index object, which we do not want to arbitrarily modify.
+		appWindows[0].webContents.send("loadCategory", (findData.id?findData.id:""), data);
+		prefs.lastCategory = findData;
 		database.saveJSON("prefs.json", prefs);
 	}
 	else
@@ -197,7 +218,11 @@ async function createWindow()
 		}
 		if(prefs.lastArticle)
 		{
-			appWindows[0].webContents.send("loadArticle", prefs.lastArticle);
+			ipcMain._events.loadArticle({}, prefs.lastArticle);
+		}
+		if(prefs.lastCategory)
+		{
+			ipcMain._events.loadCategory({}, prefs.lastCategory);
 		}
 	});
 	

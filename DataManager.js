@@ -129,6 +129,51 @@ module.exports = function(){
 		return this.index.categoryIndex[id];
 	};
 	
+	// TODO: Add a check somewhere to see if default category fields could conflict with other category fields. For example, if there's a category with the id "character" and a field "surname", and the default category has a field "character_surname", these will conflict, because the default fields have no prefix.
+	this.saveCategory = async function(data, overwrite){
+		let desiredID;
+		if(data.id)
+		{
+			desiredID = data.id;
+			delete data.id;
+		}
+		else
+		{
+			if(data.title)
+				desiredID = this.convertToID(data.title);
+			else
+			{
+				console.warn("A category must have a title.");
+				return false;
+			}
+		}
+		let finalID = desiredID;
+		if(!overwrite)
+		{
+			let inc = 2;
+			while(this.index.categoryIndex[finalID])
+			{
+				finalID = desiredID +"-"+ inc;
+				inc++;
+			}
+		}
+		if(!this.index.categoryIndex[finalID])
+			this.index.categoryIndex[finalID] = data;
+		else
+		{
+			for(let i in data)
+			{
+				// Keep in mind this overwrites the "f" property, so all existing fields will be deleted if they aren't in the new set.
+				this.index.categoryIndex[finalID][i] = data[i];
+			}
+		}
+		this.index.categoryIndex[finalID].timeLastModified = Date.now()/1000;
+		if(!this.index.categoryIndex[finalID].timeCreated)
+			this.index.categoryIndex[finalID].timeCreated = this.index.categoryIndex[finalID].timeLastModified;
+		await this.saveJSON(this.indexFile, this.index);
+		return true;
+	};
+	
 	this.convertToID = function(string){
 		return string.toLowerCase().replace(" ", "_").replace(/[\\\/]/g, "-").replace(/[^-a-z0-9_]/g, "");
 	};
