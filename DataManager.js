@@ -87,6 +87,7 @@ module.exports = function(){
 				desiredID = "untitled-" + this.generateHash(data.content);
 			else
 			{
+				// TODO: Allow any field, not just title and content, in case the default category is modified.
 				console.warn("An article must have either a title or content.");
 				return false;
 			}
@@ -139,8 +140,8 @@ module.exports = function(){
 		}
 		else
 		{
-			if(data.title)
-				desiredID = this.convertToID(data.title);
+			if(data.t)
+				desiredID = this.convertToID(data.t);
 			else
 			{
 				console.warn("A category must have a title.");

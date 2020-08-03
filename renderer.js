@@ -77,9 +77,9 @@ function addCategories(list)
 	{
 		let link = document.createElement("a");
 		link.href = "#"+ list[i].id;
-		//if(list[i].id)
-		//	link.innerHTML = list[i].id;
-		//else
+		if(list[i].t)
+			link.innerHTML = list[i].t;
+		else
 			link.innerHTML = list[i].id;
 		sidebar.appendChild(link);
 		link.addEventListener("click", handleCategoryLink);
@@ -264,16 +264,37 @@ function addCategoryFields(data)
 	let content = document.getElementById("categoriesContent");
 	while(content.hasChildNodes())
 		content.removeChild(content.firstChild);
-	content.appendChild(document.createElement("h1")).innerHTML = data.id;
+	if(data.id)
+		content.appendChild(document.createElement("h1")).innerHTML = data.id;
+	else
+	{
+		let titleElem = content.appendChild(document.createElement("input"));
+		titleElem.defaultValue = "";
+		titleElem.value = "";
+		titleElem.type = "text";
+		titleElem.id = "categoryTitle";
+		titleElem.placeholder = "Category Title";
+	}
+	let floor = content.appendChild(document.createElement("hr"));
+	floor.classList.add("categoryFieldFloor");
 	for(let f in data.f)
 	{
 		if(data.id == "*" && (f == "id" || f == "title"))
 		{
+			let idElem = content.insertBefore(document.createElement("input"), floor);
+			idElem.type = "hidden";
+			idElem.defaultValue = f;
+			idElem.value = f;
+			idElem.id = f+"_id";
+			idElem.name = "id";
+			idElem.classList.add("categoryIDField");
+			
 			for(let i in categoryFieldOptions)
 			{
-				let elem = content.appendChild(document.createElement("input"));
-				elem.id = f+"."+i;
-				elem.name = f+"."+i;
+				let elem = content.insertBefore(document.createElement("input"), floor);
+				elem.id = f+"_"+i;
+				elem.field = idElem;
+				elem.name = i;
 				elem.type = "hidden";
 				elem.defaultValue = (data.f[f][i] ? data.f[f][i] : "");
 				elem.value = (data.f[f][i] ? data.f[f][i] : "");
@@ -282,83 +303,138 @@ function addCategoryFields(data)
 		}
 		else
 		{
-			let table = content.appendChild(document.createElement("table"));
-			table.classList.add("categoryDataContainer");
-			let tbody = table.appendChild(document.createElement("tbody"));
-			
-			// Setup edit box.
-			let caption = table.appendChild(document.createElement("caption"));
-			caption.innerHTML = f;
-			
-			for(let i in categoryFieldOptions)
-			{
-				let tr = tbody.appendChild(document.createElement("tr"));
-				let th = tr.appendChild(document.createElement("th"));
-				let label = th.appendChild(document.createElement("label"));
-				label.htmlFor = f+"."+i;
-				label.innerHTML = categoryFieldOptions[i].label+":";
-				let td = tr.appendChild(document.createElement("td"));
-				let elem;
-				if(categoryFieldOptions[i].type == "select")
-				{
-					elem = td.appendChild(document.createElement("select"));
-					for(let o in categoryFieldOptions[i].options)
-					{
-						let option = elem.appendChild(document.createElement("option"));
-						option.value = o;
-						option.innerHTML = categoryFieldOptions[i].options[o];
-					}
-					elem.value = data.f[f][i];
-				}
-				else
-				{
-					elem = td.appendChild(document.createElement("input"));
-					elem.type = categoryFieldOptions[i].type;
-					if(categoryFieldOptions[i].type == "checkbox")
-					{
-						elem.value = "1";
-						elem.checked = data.f[f][i];
-					}
-					else
-					{
-						elem.defaultValue = data.f[f][i];
-						elem.value = data.f[f][i];
-					}
-				}
-				elem.id = f+"."+i;
-				elem.name = f+"."+i;
-				elem.classList.add("categoryDataEdit");
-			}
+			addCategoryField(content, f, data.f[f], floor);
 		}
 	}
+	let add = document.createElement("input");
+	add.type = "button";
+	add.value = "Add Field";
+	content.appendChild(add);
+	add.addEventListener("click", event => {
+		addCategoryField(content, "", {}, floor);
+	});
 	let save = document.createElement("input");
 	save.type = "button";
 	save.value = "Save Category";
 	content.appendChild(save);
 	save.addEventListener("click", event => {
-		let newData = {id:data.id,f:{}};
-		let dataElements = document.querySelectorAll(".categoryDataEdit");
-		dataElements.forEach((node, idx, list) => {
-			let n = node.name.lastIndexOf(".");
-			let id = node.name.substring(0, n);
-			let name = node.name.substring(n+1);
-			if(!newData.f[id])
-				newData.f[id] = {};
-			if(node.type == "checkbox")
-			{
-				if(node.checked)
-					newData.f[id][name] = true;
-			}
-			else if(categoryFieldOptions[name].type == "checkbox")
-			{
-				if(node.value)
-					newData.f[id][name] = true;
-			}
-			else if(node.value)
-				newData.f[id][name] = node.value;
-		});
-		ipcRenderer.send("saveCategory", newData);
+		let newData = {f:{}};
+		if(data.id)
+			newData.id = data.id;
+		else
+			newData.t = document.getElementById("categoryTitle").value;
+		if(newData.id || newData.t)
+		{
+			let dataElements = document.querySelectorAll(".categoryDataEdit");
+			dataElements.forEach((node, idx, list) => {
+				let field = node.field.value;
+				if(field)
+				{
+					if(!newData.f[field])
+						newData.f[field] = {};
+					if(node.type == "checkbox")
+					{
+						if(node.checked)
+							newData.f[field][node.name] = true;
+					}
+					else if(categoryFieldOptions[node.name].type == "checkbox")
+					{
+						if(node.value)
+							newData.f[field][node.name] = true;
+					}
+					else if(node.value)
+						newData.f[field][node.name] = node.value;
+				}
+			});
+			ipcRenderer.send("saveCategory", newData);
+		}
 	});
+}
+
+function addCategoryField(content, id, data, floor)
+{
+	let table = content.insertBefore(document.createElement("table"), floor);
+	table.classList.add("categoryDataContainer");
+	let tbody = table.appendChild(document.createElement("tbody"));
+	
+	// Setup edit box.
+	let caption = table.appendChild(document.createElement("caption"));
+	let idElem = caption.appendChild(document.createElement("input"));
+	if(id)
+	{
+		idElem.defaultValue = id;
+		idElem.value = id;
+	}
+	else
+	{
+		id = document.querySelectorAll(".categoryIDField").length;
+		idElem.defaultValue = "";
+		idElem.value = "";
+	}
+	idElem.type = "text";
+	idElem.id = id+"_id";
+	idElem.name = "id";
+	idElem.placeholder = "Unique Identifier";
+	idElem.classList.add("categoryIDField");
+	let deleteBtn = caption.appendChild(document.createElement("input"));
+	deleteBtn.value = "X";
+	deleteBtn.type = "button";
+	deleteBtn.target = table;
+	deleteBtn.addEventListener("click", event => {
+		event.target.target.parentNode.removeChild(event.target.target);
+	});
+	
+	for(let i in categoryFieldOptions)
+	{
+		let tr = tbody.appendChild(document.createElement("tr"));
+		let th = tr.appendChild(document.createElement("th"));
+		let label = th.appendChild(document.createElement("label"));
+		label.htmlFor = id+"_"+i;
+		label.innerHTML = categoryFieldOptions[i].label+":";
+		let td = tr.appendChild(document.createElement("td"));
+		let elem;
+		if(categoryFieldOptions[i].type == "select")
+		{
+			elem = td.appendChild(document.createElement("select"));
+			for(let o in categoryFieldOptions[i].options)
+			{
+				let option = elem.appendChild(document.createElement("option"));
+				option.value = o;
+				option.innerHTML = categoryFieldOptions[i].options[o];
+			}
+			if(data[i])
+				elem.value = data[i];
+			else
+				elem.selectedIndex = 0;
+		}
+		else
+		{
+			elem = td.appendChild(document.createElement("input"));
+			elem.type = categoryFieldOptions[i].type;
+			if(categoryFieldOptions[i].type == "checkbox")
+			{
+				elem.value = "1";
+				elem.checked = !!data[i];
+			}
+			else
+			{
+				if(data[i])
+				{
+					elem.defaultValue = data[i];
+					elem.value = data[i];
+				}
+				else
+				{
+					elem.defaultValue = "";
+					elem.value = "";
+				}
+			}
+		}
+		elem.id = id+"_"+i;
+		elem.field = idElem;
+		elem.name = i;
+		elem.classList.add("categoryDataEdit");
+	}
 }
 
 window.world = new maps.WorldMap([0,0], 2112);
