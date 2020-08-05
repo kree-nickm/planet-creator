@@ -59,6 +59,7 @@ function addArticles(list)
 	}
 }
 
+let categoriesList = [];
 function addCategories(list)
 {
 	let sidebar = document.getElementById("categoriesSidebar");
@@ -78,9 +79,15 @@ function addCategories(list)
 		let link = document.createElement("a");
 		link.href = "#"+ list[i].id;
 		if(list[i].t)
+		{
+			categoriesList.push(list[i].t);
 			link.innerHTML = list[i].t;
+		}
 		else
+		{
+			categoriesList.push(list[i].id);
 			link.innerHTML = list[i].id;
+		}
 		sidebar.appendChild(link);
 		link.addEventListener("click", handleCategoryLink);
 	}
@@ -148,8 +155,20 @@ function addArticleFields(data)
 	let content = document.getElementById("articlesContent");
 	while(content.hasChildNodes())
 		content.removeChild(content.firstChild);
+	let categoryList = addDOMElement(content, {
+		tagName: "div",
+	});
+	// TODO: Full category data is sent, but this might not be necessary because listArticles receives full category data already.
 	for(let i in data.categories)
 	{
+		if(i != "*")
+		{
+			let categoryLabel = addDOMElement(categoryList, {
+				tagName: "span",
+				innerHTML: data.categories[i].t ? data.categories[i].t : data.categories[i].id,
+				classes: ["categoryLabel"],
+			});
+		}
 		for(let f in data.categories[i].f)
 		{
 			if(i == "*" && f == "id" && !data[f])
@@ -157,7 +176,7 @@ function addArticleFields(data)
 			
 			let container = document.createElement("div");
 			container.classList.add("articleDataContainer", "reading");
-			content.appendChild(container);
+			content.insertBefore(container, categoryList);
 			
 			// Setup edit box.
 			let editElem;
@@ -189,8 +208,13 @@ function addArticleFields(data)
 			// Setup read box.
 			if(editElem.type != "hidden")
 			{
-				let readElem = document.createElement("div");
-				let readText = document.createElement("span");
+				let readElem = addDOMElement(container, {
+					tagName: "div",
+					classes: ["articleDataRead"],
+				});
+				let readText = addDOMElement(readElem, {
+					tagName: "span",
+				});
 				if(data[f])
 				{
 					if(data.categories[i].f[f].m)
@@ -212,32 +236,50 @@ function addArticleFields(data)
 					container.classList.add("editing");
 					container.classList.remove("reading");
 				}
-				let editButton = document.createElement("button");
-				editButton.innerHTML = "edit";
-				editButton.classList.add("edit");
-				readElem.appendChild(editButton);
-				readElem.appendChild(readText);
-				editButton.addEventListener("click", ((event) => {
+				let editButton = addDOMElement(readElem, {
+					tagName: "button",
+					innerHTML: "edit",
+					classes: ["edit"],
+				});
+				editButton.addEventListener("click", (event) => {
 					container.classList.add("editing");
 					container.classList.remove("reading");
-				}).bind(container));
-				readElem.classList.add("articleDataRead");
-				container.appendChild(readElem);
+					if(!document.getElementById("saveArticle"))
+					{
+						let save = addDOMElement(content, {
+							tagName: "input",
+							id: "saveArticle",
+							type: "button",
+							value: "Save Article",
+						});
+						save.addEventListener("click", event => {
+							let data = {};
+							let dataElements = document.querySelectorAll(".articleDataEdit");
+							dataElements.forEach((node, idx, list) => {
+								if(node.value != "")
+									data[node.name] = node.value;
+							});
+							ipcRenderer.send("saveArticle", data);
+						});
+					}
+				});
 			}
 		}
 	}
-	let save = document.createElement("input");
-	save.type = "button";
-	save.value = "Save Article";
-	content.appendChild(save);
-	save.addEventListener("click", event => {
-		let data = {};
-		let dataElements = document.querySelectorAll(".articleDataEdit");
-		dataElements.forEach((node, idx, list) => {
-			if(node.value != "")
-				data[node.name] = node.value;
-		});
-		ipcRenderer.send("saveArticle", data);
+	let addCategory = addDOMElement(content, {
+		tagName: "input",
+	});
+	addCategory.addEventListener("keydown", event => {
+		if(event.keyCode == 13)
+		{
+			ipcRenderer.send("addArticleCategory", {
+				article: data.id,
+				categories: data.categories,
+				categoryTitle: event.target.value,
+			});
+		}
+		else
+			console.log(event);
 	});
 }
 
@@ -435,6 +477,28 @@ function addCategoryField(content, id, data, floor)
 		elem.name = i;
 		elem.classList.add("categoryDataEdit");
 	}
+}
+
+function addDOMElement(parent, elementData, sibling)
+{
+	let element;
+	if(sibling)
+		element = parent.insertBefore(document.createElement(elementData.tagName), sibling);
+	else
+		element = parent.appendChild(document.createElement(elementData.tagName));
+	for(let i in elementData)
+	{
+		if(i == "tagName")
+			continue;
+		else if(i == "classes")
+		{
+			if(Array.isArray(elementData[i]))
+				element.classList.add(...elementData[i]);
+		}
+		else
+			element[i] = elementData[i];
+	}
+	return element;
 }
 
 window.world = new maps.WorldMap([0,0], 2112);

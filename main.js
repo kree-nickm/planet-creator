@@ -138,6 +138,29 @@ ipcMain.on("loadCategory", async (event, findData) => {
 	}
 });
 
+ipcMain.on("addArticleCategory", async (event, data) => {
+	let category;
+	for(let i in database.index.categoryIndex)
+	{
+		if(database.index.categoryIndex[i].t == data.categoryTitle || i == data.categoryTitle)
+		{
+			category = i;
+		}
+	}
+	if(category)
+	{
+		let categories = Object.keys(data.categories);
+		if(categories.indexOf(category) == -1)
+		{
+			categories.push(category);
+			ipcMain._events.saveArticle(event, {
+				id: data.article,
+				categories: categories,
+			});
+		}
+	}
+});
+
 function sendArticles()
 {
 	if(database.index && appWindows[0])
@@ -157,6 +180,7 @@ function sendArticles()
 		{
 			let category = {};
 			category.id = i;
+			category.t = database.index.categoryIndex[i].t;
 			list.categories.push(category);
 		}
 		appWindows[0].webContents.send("listArticles", list);
