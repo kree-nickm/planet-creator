@@ -1,6 +1,8 @@
 const { ipcRenderer } = require('electron');
 const fs = require('fs');
 const maps = require('./MapManager.js');
+const $ = jQuery = require('jquery');
+require('./node_modules/jquery-ui-dist/jquery-ui.min.js');
 
 ipcRenderer.on("openMap", (event, mapJSON) => {
 	window.world.load(mapJSON);
@@ -26,14 +28,7 @@ ipcRenderer.on("setView", (event, view) => {
 });
 
 ipcRenderer.on("listArticles", (event, list) => {
-	if(list.articles && list.articles.length)
-		addArticles(list.articles);
-	if(list.categories && list.categories.length)
-		addCategories(list.categories);
-});
-
-function addArticles(list)
-{
+	//console.log("listArticles", list);
 	let sidebar = document.getElementById("articlesSidebar");
 	// Reset existing.
 	while(sidebar.hasChildNodes())
@@ -46,22 +41,25 @@ function addArticles(list)
 	link.addEventListener("click", handleArticleLink);
 	// Add all the articles.
 	list.sort(sortByTitle);
-	for(let i in list)
+	if(Array.isArray(list) && list.length)
 	{
-		let link = document.createElement("a");
-		link.href = "#"+ list[i].id;
-		if(list[i].title)
-			link.innerHTML = list[i].title;
-		else
-			link.innerHTML = list[i].id;
-		sidebar.appendChild(link);
-		link.addEventListener("click", handleArticleLink);
+		for(let i in list)
+		{
+			let link = document.createElement("a");
+			link.href = "#"+ list[i].id;
+			if(list[i].t)
+				link.innerHTML = list[i].t;
+			else
+				link.innerHTML = list[i].id;
+			sidebar.appendChild(link);
+			link.addEventListener("click", handleArticleLink);
+		}
 	}
-}
+});
 
 let categoriesList = [];
-function addCategories(list)
-{
+ipcRenderer.on("listCategories", (event, list) => {
+	//console.log("listCategories", list);
 	let sidebar = document.getElementById("categoriesSidebar");
 	// Reset existing.
 	while(sidebar.hasChildNodes())
@@ -73,38 +71,49 @@ function addCategories(list)
 	sidebar.appendChild(link);
 	link.addEventListener("click", handleCategoryLink);
 	// Add all the categories.
-	list.sort(sortByID);
-	for(let i in list)
+	if(Array.isArray(list) && list.length)
 	{
-		let link = document.createElement("a");
-		link.href = "#"+ list[i].id;
-		if(list[i].t)
+		categoriesList = []
+		list.sort(sortByID);
+		for(let i in list)
 		{
-			categoriesList.push(list[i].t);
-			link.innerHTML = list[i].t;
+			let link = document.createElement("a");
+			link.href = "#"+ list[i].id;
+			if(list[i].t)
+			{
+				categoriesList.push(list[i].t);
+				link.innerHTML = list[i].t;
+			}
+			else
+			{
+				categoriesList.push(list[i].id);
+				link.innerHTML = list[i].id;
+			}
+			sidebar.appendChild(link);
+			link.addEventListener("click", handleCategoryLink);
 		}
-		else
-		{
-			categoriesList.push(list[i].id);
-			link.innerHTML = list[i].id;
-		}
-		sidebar.appendChild(link);
-		link.addEventListener("click", handleCategoryLink);
 	}
-}
+});
 
 ipcRenderer.on("loadArticle", (event, id, data, bonusData, categories) => {
-	data.id = id;
+	console.log("loadArticle", id, data, bonusData, categories);
+	data.f['*'].id = id;
 	data.categories = categories;
-	for(let i in bonusData)
-		data[i] = bonusData[i];
+	for(let c in bonusData.f)
+		for(let f in bonusData.f[c])
+			data.f[c][f] = bonusData.f[c][f];
 	addArticleFields(data);
 });
 
 ipcRenderer.on("loadCategory", (event, id, data) => {
+	//console.log("loadCategory", id, data);
 	data.id = id;
 	addCategoryFields(data);
 });
+
+const Renderer = new (function(){
+	this.categoriesList = [];
+})();
 
 function handleArticleLink(event)
 {
@@ -158,7 +167,8 @@ function addArticleFields(data)
 	let categoryList = addDOMElement(content, {
 		tagName: "div",
 	});
-	// TODO: Full category data is sent, but this might not be necessary because listArticles receives full category data already.
+	let handledFields = [];
+	// TODO: Full category data is sent, but this might not be necessary because listCategories receives full category data already.
 	for(let i in data.categories)
 	{
 		if(i != "*")
@@ -171,7 +181,8 @@ function addArticleFields(data)
 		}
 		for(let f in data.categories[i].f)
 		{
-			if(i == "*" && f == "id" && !data[f])
+			handledFields.push(i+"_"+f);
+			if(i == "*" && f == "id" && !data.f[i][f])
 				continue;
 			
 			let container = document.createElement("div");
@@ -189,14 +200,12 @@ function addArticleFields(data)
 				editElem = document.createElement("input");
 				editElem.type = data.categories[i].f[f].t ? data.categories[i].f[f].t : "text";
 			}
-			if(i == "*")
-				editElem.name = f;
-			else
-				editElem.name = i +"_"+ f;
-			if(data[f])
+			editElem.field = f;
+			editElem.category = i;
+			if(data.f[i][f])
 			{
-				editElem.defaultValue = data[f];
-				editElem.value = data[f];
+				editElem.defaultValue = data.f[i][f];
+				editElem.value = data.f[i][f];
 			}
 			if(data.categories[i].f[f].n)
 				editElem.placeholder = data.categories[i].f[f].n;
@@ -215,11 +224,11 @@ function addArticleFields(data)
 				let readText = addDOMElement(readElem, {
 					tagName: "span",
 				});
-				if(data[f])
+				if(data.f[i][f])
 				{
 					if(data.categories[i].f[f].m)
 					{
-						readText.innerHTML = data[f+":Markdown"];
+						readText.innerHTML = data.f[i][f+":Markdown"];
 						let links = readText.querySelectorAll("a[href^='#']");
 						links.forEach((node, idx, list) => {
 							node.addEventListener("click", handleArticleLink);
@@ -228,13 +237,17 @@ function addArticleFields(data)
 						});
 					}
 					else
-						readText.innerHTML = data[f];
+						readText.innerHTML = data.f[i][f];
 				}
 				else
 				{
 					readText.innerHTML = "";
 					container.classList.add("editing");
 					container.classList.remove("reading");
+					if(!document.getElementById("saveArticle"))
+					{
+						addSaveButton(content);
+					}
 				}
 				let editButton = addDOMElement(readElem, {
 					tagName: "button",
@@ -246,21 +259,7 @@ function addArticleFields(data)
 					container.classList.remove("reading");
 					if(!document.getElementById("saveArticle"))
 					{
-						let save = addDOMElement(content, {
-							tagName: "input",
-							id: "saveArticle",
-							type: "button",
-							value: "Save Article",
-						});
-						save.addEventListener("click", event => {
-							let data = {};
-							let dataElements = document.querySelectorAll(".articleDataEdit");
-							dataElements.forEach((node, idx, list) => {
-								if(node.value != "")
-									data[node.name] = node.value;
-							});
-							ipcRenderer.send("saveArticle", data);
-						});
+						addSaveButton(content);
 					}
 				});
 			}
@@ -269,17 +268,45 @@ function addArticleFields(data)
 	let addCategory = addDOMElement(content, {
 		tagName: "input",
 	});
+	$(addCategory).autocomplete({
+		source: categoriesList,
+		delay: 0,
+	});
 	addCategory.addEventListener("keydown", event => {
 		if(event.keyCode == 13)
 		{
 			ipcRenderer.send("addArticleCategory", {
-				article: data.id,
-				categories: data.categories,
-				categoryTitle: event.target.value,
+				articleID: data.f['*'].id,
+				categoryList: Object.keys(data.categories),
+				newTitle: event.target.value,
 			});
+			event.target.value = "";
 		}
-		else
-			console.log(event);
+		//else
+		//	console.log(event);
+	});
+}
+
+function addSaveButton(content)
+{
+	let save = addDOMElement(content, {
+		tagName: "input",
+		id: "saveArticle",
+		type: "button",
+		value: "Save Article",
+	});
+	save.addEventListener("click", event => {
+		let data = {f:{}};
+		let dataElements = document.querySelectorAll(".articleDataEdit");
+		dataElements.forEach((node, idx, list) => {
+			if(node.value != "")
+			{
+				if(!data.f[node.category])
+					data.f[node.category] = {};
+				data.f[node.category][node.field] = node.value;
+			}
+		});
+		ipcRenderer.send("saveArticle", data);
 	});
 }
 
@@ -321,7 +348,7 @@ function addCategoryFields(data)
 	floor.classList.add("categoryFieldFloor");
 	for(let f in data.f)
 	{
-		if(data.id == "*" && (f == "id" || f == "title"))
+		if(data.id == "*" && (f == "id" || f == "t"))
 		{
 			let idElem = content.insertBefore(document.createElement("input"), floor);
 			idElem.type = "hidden";

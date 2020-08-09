@@ -27,8 +27,8 @@ app.on("window-all-closed", () => {
 ipcMain.on("saveArticle", async (event, data) => {
 	if(database.index)
 	{
-		let id = data.id;
-		if(await database.saveArticle(data, (id != "")))
+		let id = data.f['*'].id; // store it because saveData will delete it.
+		if(await database.saveData(data, false, !!id))
 		{
 			sendArticles();
 			ipcMain._events.loadArticle(event, {id:id});
@@ -44,33 +44,30 @@ ipcMain.on("saveArticle", async (event, data) => {
 	}
 });
 
+// findData should have either an id (to edit existing article) or a title property (to create a new one).
 ipcMain.on("loadArticle", async (event, findData) => {
 	if(database.index)
 	{
 		let data;
 		if(findData.id)
-			data = await database.loadArticle(findData.id);
+			data = await database.loadData(findData.id, false);
 		else
-			data = findData;
+			data = {c:["*"],f:{'*':{t:findData.title}}};
 		// Don't modify `data` past this point, since it might be a reference to the saved metadata object, which we may want to reuse in its original unmodified form.
-		let categoryIDs;
-		if(Array.isArray(data.categories))
-			categoryIDs = ["*"].concat(data.categories);
-		else
-			categoryIDs = ["*"];
 		let categories = {};
-		let bonusData = {};
-		for(let c in categoryIDs)
+		let bonusData = {f:{}};
+		for(let i in data.c)
 		{
-			let categoryData = database.loadCategory(categoryIDs[c]);
+			bonusData.f[data.c[i]] = {};
+			let categoryData = await database.loadData(data.c[i], true);
 			for(let f in categoryData.f)
 			{
-				if(categoryData.f[f].m && data[f])
+				if(categoryData.f[f].m && data.f[data.c[i]] && data.f[data.c[i]][f])
 				{
-					bonusData[f+":Markdown"] = md.render(data[f].replace(/\[\[(.*?)]]/g, (match,p1,offset,string) => {
-						if(database.index.articleIndex) for(let i in database.index.articleIndex)
+					bonusData.f[data.c[i]][f+":Markdown"] = md.render(data.f[data.c[i]][f].replace(/\[\[(.*?)]]/g, (match,p1,offset,string) => {
+						if(database.index.ai) for(let i in database.index.ai)
 						{
-							if(typeof(database.index.articleIndex[i].t) == "string" && database.index.articleIndex[i].t.toLowerCase() == p1.toLowerCase())
+							if(typeof(database.index.ai[i].t) == "string" && database.index.ai[i].t.toLowerCase() == p1.toLowerCase())
 							{
 								return "["+ p1 +"](#"+ i +")";
 							}
@@ -79,7 +76,7 @@ ipcMain.on("loadArticle", async (event, findData) => {
 					}));
 				}
 			}
-			categories[categoryIDs[c]] = categoryData;
+			categories[data.c[i]] = categoryData;
 		}
 		appWindows[0].webContents.send("loadArticle", (findData.id?findData.id:""), data, bonusData, categories);
 		prefs.lastArticle = findData;
@@ -98,8 +95,8 @@ ipcMain.on("loadArticle", async (event, findData) => {
 ipcMain.on("saveCategory", async (event, data) => {
 	if(database.index)
 	{
-		let id = data.id;
-		if(await database.saveCategory(data, (id != "")))
+		let id = data.id; // store it because saveData will delete it.
+		if(await database.saveData(data, true, !!id))
 		{
 			sendArticles();
 			ipcMain._events.loadCategory(event, {id:id});
@@ -115,14 +112,15 @@ ipcMain.on("saveCategory", async (event, data) => {
 	}
 });
 
+// findData should have either an id (to edit existing category) or a title property (to create a new one).
 ipcMain.on("loadCategory", async (event, findData) => {
 	if(database.index)
 	{
 		let data;
 		if(findData.id)
-			data = await database.loadCategory(findData.id)
+			data = await database.loadData(findData.id, true)
 		else
-			data = findData;
+			data = {t:findData.title};
 		// Don't modify `data` past this point, since it might be a reference to the saved index object, which we do not want to arbitrarily modify.
 		appWindows[0].webContents.send("loadCategory", (findData.id?findData.id:""), data);
 		prefs.lastCategory = findData;
@@ -140,22 +138,22 @@ ipcMain.on("loadCategory", async (event, findData) => {
 
 ipcMain.on("addArticleCategory", async (event, data) => {
 	let category;
-	for(let i in database.index.categoryIndex)
-	{
-		if(database.index.categoryIndex[i].t == data.categoryTitle || i == data.categoryTitle)
-		{
+	for(let i in database.index.ci)
+		if(database.index.ci[i].t == data.newTitle)
 			category = i;
-		}
-	}
+	if(!category)
+		for(let i in database.index.ci)
+			if(i == data.newTitle)
+				category = i;
 	if(category)
 	{
-		let categories = Object.keys(data.categories);
-		if(categories.indexOf(category) == -1)
+		let categoryList = data.categoryList;
+		if(categoryList.indexOf(category) == -1)
 		{
-			categories.push(category);
+			categoryList.push(category);
 			ipcMain._events.saveArticle(event, {
-				id: data.article,
-				categories: categories,
+				f: {'*': {id: data.articleID}},
+				c: categoryList,
 			});
 		}
 	}
@@ -163,25 +161,21 @@ ipcMain.on("addArticleCategory", async (event, data) => {
 
 function sendArticles()
 {
+	listArticles();
+	listCategories();
+}
+
+function listArticles()
+{
 	if(database.index && appWindows[0])
 	{
-		let list = {
-			articles: [],
-			categories: [],
-		};
-		if(database.index.articleIndex) for(let i in database.index.articleIndex)
+		let list = [];
+		if(database.index.ai) for(let i in database.index.ai)
 		{
 			let article = {};
 			article.id = i;
-			article.title = database.index.articleIndex[i].t;
-			list.articles.push(article);
-		}
-		if(database.index.categoryIndex) for(let i in database.index.categoryIndex)
-		{
-			let category = {};
-			category.id = i;
-			category.t = database.index.categoryIndex[i].t;
-			list.categories.push(category);
+			article.t = database.index.ai[i].t;
+			list.push(article);
 		}
 		appWindows[0].webContents.send("listArticles", list);
 	}
@@ -190,6 +184,30 @@ function sendArticles()
 		showMessage({
 			type: "error",
 			title: "Failed to Display Articles",
+			message: "The database for your setting has not been loaded, or there is no GUI window loaded.",
+		});
+	}
+}
+
+function listCategories()
+{
+	if(database.index && appWindows[0])
+	{
+		let list = [];
+		if(database.index.ci) for(let i in database.index.ci)
+		{
+			let category = {};
+			category.id = i;
+			category.t = database.index.ci[i].t;
+			list.push(category);
+		}
+		appWindows[0].webContents.send("listCategories", list);
+	}
+	else
+	{
+		showMessage({
+			type: "error",
+			title: "Failed to Display Categories",
 			message: "The database for your setting has not been loaded, or there is no GUI window loaded.",
 		});
 	}
@@ -259,13 +277,31 @@ async function createWindow()
 		submenu: new Menu(),
 	});
 	fileMenu.submenu.append(new MenuItem({
+		label: "Create Setting...",
+		accelerator: "CommandOrControl+O",
+		type: "normal",
+		click: async function(){
+			let selection = await dialog.showOpenDialog(appWindows[0], {
+				title: "Create Setting...",
+				properties: ["openDirectory","createDirectory","promptToCreate"],
+			});
+			if(!selection.canceled)
+			{
+			}
+		},
+	}));
+	fileMenu.submenu.append(new MenuItem({
 		label: "Open Setting...",
 		accelerator: "CommandOrControl+O",
 		type: "normal",
 		click: async function(){
 			let selection = await dialog.showOpenDialog(appWindows[0], {
-				title: "Select Setting Directory...",
-				properties: ["openDirectory","createDirectory","promptToCreate"],
+				title: "Open Setting...",
+				properties: ["openFile"],
+				filters: [
+					{name:"JSON", extensions:["json"]},
+					{name:"All Files", extensions:["*"]},
+				],
 			});
 			if(!selection.canceled)
 			{
@@ -317,12 +353,12 @@ async function createWindow()
 			}
 		},
 	}));
-	fileMenu.submenu.append(new MenuItem({
+	/*fileMenu.submenu.append(new MenuItem({
 		label: "Save Map As...",
 		accelerator: "CommandOrControl+S",
 		type: "normal",
 		click: () => {appWindows[0].webContents.executeJavaScript("window.world.save('map');").then(console.log).catch(console.error);},
-	}));
+	}));*/
 	fileMenu.submenu.append(new MenuItem({
 		label: "Add Map Image...",
 		accelerator: "CommandOrControl+A",

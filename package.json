@@ -12,7 +12,9 @@
 		"start": "electron ."
 	},
 	"dependencies": {
-		"markdown-it": "^11.0.0"
+		"markdown-it": "^11.0.0",
+		"jquery": "^3.5.1",
+		"jquery-ui-dist": "^1.12.1"
 	},
 	"devDependencies": {
 		"electron": "^9.1.2"
