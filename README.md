@@ -54,11 +54,11 @@ This is a loose design document for the features that are planned. Crossed-out i
    * Laws of nature.
    * Metaphysical concepts and ideas, e.g. “what is magic”, “what is a soul”.
    * Miscellaneous notes that you don’t feel like categorizing; stream-of-consciousness ramblings.
-* ~~Easily link between articles when one article needs to reference another. E.g. text that specifies the birthplace of a character links to the location article of said birthplace.~~
-* Allow for intersection between different article types for extreme cases.
-   * Is a sentient weapon an object or a character?
-   * Is a miniature civilization contained inside a snowglobe, that can be carried around, a location or an object?
-   * There’s no need to answer these questions. Make article types a kind of template that can be applied to an article, allowing multiple templates to be applied to one article when needed.
+* ~~Easily link between articles when one article needs to reference another. E.g. text that specifies the birthplace of a character links to the location article of said birthplace.
+* ~~Allow for intersection between different article types for extreme cases.
+   * ~~Is a sentient weapon an object or a character?
+   * ~~Is a miniature civilization contained inside a snowglobe, that can be carried around, a location or an object?
+   * ~~There’s no need to answer these questions. Make article types a kind of template that can be applied to an article, allowing multiple templates to be applied to one article when needed.
 * Allow different levels of visibility to all articles. If you want other users to view your content, but not all of it, you should be able to decide what things someone can see.
    * Let the primary user set up their own access levels. Not a simple “GM level” and “player level”, but anything in between that they could want.
    * Let’s say you have four players able to see your content, but each one of them knows different things about a specific character. Each one of them should see a different version of that character’s article.
