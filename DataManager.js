@@ -304,7 +304,7 @@ module.exports = function(){
 			}
 			this.verifyData(metaJSON[finalID], this.minimumArticle);
 			if(metaFile)
-				index[finalID] = {f:metaFile,t:metaJSON[finalID].f['*'].t};
+				index[finalID] = {f:metaFile,t:metaJSON[finalID].f['*'].t,c:metaJSON[finalID].c};
 		}
 		
 		// Save the JSON files.

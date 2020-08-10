@@ -147,21 +147,21 @@ h1 {
 	box-sizing: border-box;
 }
 
-.categoryDataContainer {
+.categoryFieldContainer {
 	display: block;
 	box-sizing: border-box;
 }
 
-.categoryDataContainer caption {
+.categoryFieldContainer caption {
 	font-weight: bold;
 	text-align: left;
 }
 
-.categoryDataContainer tbody {
+.categoryFieldContainer tbody {
 	font-size: 0.9em;
 }
 
-.categoryDataContainer th {
+.categoryFieldContainer th {
 	padding-left: 4ex;
 	text-align: right;
 }

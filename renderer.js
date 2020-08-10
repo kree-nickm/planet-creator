@@ -4,6 +4,12 @@ const maps = require('./MapManager.js');
 const $ = jQuery = require('jquery');
 require('./node_modules/jquery-ui-dist/jquery-ui.min.js');
 
+const Renderer = new (function(){
+	this.categoriesList = [];
+	this.articleIndex = {};
+	this.categoryIndex = {};
+})();
+
 ipcRenderer.on("openMap", (event, mapJSON) => {
 	window.world.load(mapJSON);
 });
@@ -28,7 +34,6 @@ ipcRenderer.on("setView", (event, view) => {
 });
 
 ipcRenderer.on("listArticles", (event, list) => {
-	//console.log("listArticles", list);
 	let sidebar = document.getElementById("articlesSidebar");
 	// Reset existing.
 	while(sidebar.hasChildNodes())
@@ -40,11 +45,13 @@ ipcRenderer.on("listArticles", (event, list) => {
 	sidebar.appendChild(link);
 	link.addEventListener("click", handleArticleLink);
 	// Add all the articles.
-	list.sort(sortByTitle);
 	if(Array.isArray(list) && list.length)
 	{
+		Renderer.articleIndex = {};
+		list.sort(sortByTitle);
 		for(let i in list)
 		{
+			Renderer.articleIndex[list[i].id] = list[i];
 			let link = document.createElement("a");
 			link.href = "#"+ list[i].id;
 			if(list[i].t)
@@ -57,9 +64,7 @@ ipcRenderer.on("listArticles", (event, list) => {
 	}
 });
 
-let categoriesList = [];
 ipcRenderer.on("listCategories", (event, list) => {
-	//console.log("listCategories", list);
 	let sidebar = document.getElementById("categoriesSidebar");
 	// Reset existing.
 	while(sidebar.hasChildNodes())
@@ -73,20 +78,22 @@ ipcRenderer.on("listCategories", (event, list) => {
 	// Add all the categories.
 	if(Array.isArray(list) && list.length)
 	{
-		categoriesList = []
+		Renderer.categoriesList = [];
+		Renderer.categoryIndex = {};
 		list.sort(sortByID);
 		for(let i in list)
 		{
+			Renderer.categoryIndex[list[i].id] = list[i];
 			let link = document.createElement("a");
 			link.href = "#"+ list[i].id;
 			if(list[i].t)
 			{
-				categoriesList.push(list[i].t);
+				Renderer.categoriesList.push(list[i].t);
 				link.innerHTML = list[i].t;
 			}
 			else
 			{
-				categoriesList.push(list[i].id);
+				Renderer.categoriesList.push(list[i].id);
 				link.innerHTML = list[i].id;
 			}
 			sidebar.appendChild(link);
@@ -96,7 +103,7 @@ ipcRenderer.on("listCategories", (event, list) => {
 });
 
 ipcRenderer.on("loadArticle", (event, id, data, bonusData, categories) => {
-	console.log("loadArticle", id, data, bonusData, categories);
+	//console.log("loadArticle", id, data, bonusData, categories);
 	data.f['*'].id = id;
 	data.categories = categories;
 	for(let c in bonusData.f)
@@ -110,10 +117,6 @@ ipcRenderer.on("loadCategory", (event, id, data) => {
 	data.id = id;
 	addCategoryFields(data);
 });
-
-const Renderer = new (function(){
-	this.categoriesList = [];
-})();
 
 function handleArticleLink(event)
 {
@@ -139,14 +142,14 @@ function handleCategoryLink(event)
 
 const stringCollator = new Intl.Collator("en");
 function sortByTitle(a, b) {
-	if(!a.title && !b.title)
+	if(!a.t && !b.t)
 		return 0;
-	else if(!a.title)
+	else if(!a.t)
 		return 1;
-	else if(!b.title)
+	else if(!b.t)
 		return -1;
 	else
-		return stringCollator.compare(a.title, b.title);
+		return stringCollator.compare(a.t, b.t);
 }
 function sortByID(a, b) {
 	if(!a.id && !b.id)
@@ -168,7 +171,6 @@ function addArticleFields(data)
 		tagName: "div",
 	});
 	let handledFields = [];
-	// TODO: Full category data is sent, but this might not be necessary because listCategories receives full category data already.
 	for(let i in data.categories)
 	{
 		if(i != "*")
@@ -195,6 +197,35 @@ function addArticleFields(data)
 			{
 				editElem = document.createElement("textarea");
 			}
+			else if(data.categories[i].f[f].t == "select")
+			{
+				editElem = document.createElement("select");
+				let options = {};
+				if(data.categories[i].f[f].f == "category")
+				{
+					for(let k in Renderer.articleIndex)
+					{
+						if(Renderer.articleIndex[k].c.indexOf(data.categories[i].f[f].g) > -1)
+							options[k] = Renderer.articleIndex[k].t;
+					}
+				}
+				else if(data.categories[i].f[f].f == "articles")
+				{
+					for(let k in Renderer.articleIndex)
+					{
+						options[k] = Renderer.articleIndex[k].t;
+					}
+				}
+				let option = editElem.appendChild(document.createElement("option"));
+				option.value = "";
+				option.innerHTML = "";
+				for(let o in options)
+				{
+					let option = editElem.appendChild(document.createElement("option"));
+					option.value = o;
+					option.innerHTML = options[o];
+				}
+			}
 			else
 			{
 				editElem = document.createElement("input");
@@ -202,7 +233,7 @@ function addArticleFields(data)
 			}
 			editElem.field = f;
 			editElem.category = i;
-			if(data.f[i][f])
+			if(data.f[i] && data.f[i][f])
 			{
 				editElem.defaultValue = data.f[i][f];
 				editElem.value = data.f[i][f];
@@ -224,7 +255,7 @@ function addArticleFields(data)
 				let readText = addDOMElement(readElem, {
 					tagName: "span",
 				});
-				if(data.f[i][f])
+				if(data.f[i] && data.f[i][f])
 				{
 					if(data.categories[i].f[f].m)
 					{
@@ -269,7 +300,7 @@ function addArticleFields(data)
 		tagName: "input",
 	});
 	$(addCategory).autocomplete({
-		source: categoriesList,
+		source: Renderer.categoriesList,
 		delay: 0,
 	});
 	addCategory.addEventListener("keydown", event => {
@@ -316,14 +347,54 @@ const categoryFieldOptions = {
 		label: "Field Name",
 	},
 	't': {
+		checkConditions: true,
 		type: "select",
 		label: "Field Type",
 		options: {
 			"text": "Single Line",
 			"textarea": "Paragraphs",
+			"select": "Predefined Options",
+		},
+	},
+	'f': {
+		checkConditions: true,
+		condition: function(fieldContainer){
+			let type = $(fieldContainer).find(".field-t").val();
+			return type == "select";
+		},
+		type: "select",
+		label: "Option Filter",
+		options: {
+			"articles": "All Articles",
+			"category": "Articles in Specified Category",
+		},
+	},
+	'g': {
+		condition: function(fieldContainer){
+			let type = $(fieldContainer).find(".field-t").val();
+			let filter = $(fieldContainer).find(".field-f").val();
+			return type == "select" && (filter == "category");
+		},
+		type: "select",
+		label: "Specify",
+		options: function(fieldContainer){
+			let filter = $(fieldContainer).find(".field-f").val();
+			switch(filter)
+			{
+				case "category":
+					let result = {}
+					for(let i in Renderer.categoryIndex)
+						result[i] = Renderer.categoryIndex[i].t;
+					return result;
+					break;
+			}
 		},
 	},
 	'm': {
+		condition: function(fieldContainer){
+			let type = $(fieldContainer).find(".field-t").val();
+			return type == "text" || type == "textarea";
+		},
 		type: "checkbox",
 		label: "Use Markdown",
 	},
@@ -334,7 +405,7 @@ function addCategoryFields(data)
 	while(content.hasChildNodes())
 		content.removeChild(content.firstChild);
 	if(data.id)
-		content.appendChild(document.createElement("h1")).innerHTML = data.id;
+		content.appendChild(document.createElement("h1")).innerHTML = data.t?data.t:data.id;
 	else
 	{
 		let titleElem = content.appendChild(document.createElement("input"));
@@ -423,7 +494,7 @@ function addCategoryFields(data)
 function addCategoryField(content, id, data, floor)
 {
 	let table = content.insertBefore(document.createElement("table"), floor);
-	table.classList.add("categoryDataContainer");
+	table.classList.add("categoryFieldContainer");
 	let tbody = table.appendChild(document.createElement("tbody"));
 	
 	// Setup edit box.
@@ -445,6 +516,7 @@ function addCategoryField(content, id, data, floor)
 	idElem.name = "id";
 	idElem.placeholder = "Unique Identifier";
 	idElem.classList.add("categoryIDField");
+	// TODO: If the id is changed after being created, every single article in this category needs to be updated.
 	let deleteBtn = caption.appendChild(document.createElement("input"));
 	deleteBtn.value = "X";
 	deleteBtn.type = "button";
@@ -456,6 +528,7 @@ function addCategoryField(content, id, data, floor)
 	for(let i in categoryFieldOptions)
 	{
 		let tr = tbody.appendChild(document.createElement("tr"));
+		tr.classList.add("categoryFieldOptionContainer");
 		let th = tr.appendChild(document.createElement("th"));
 		let label = th.appendChild(document.createElement("label"));
 		label.htmlFor = id+"_"+i;
@@ -465,14 +538,25 @@ function addCategoryField(content, id, data, floor)
 		if(categoryFieldOptions[i].type == "select")
 		{
 			elem = td.appendChild(document.createElement("select"));
-			for(let o in categoryFieldOptions[i].options)
+			if(typeof(categoryFieldOptions[i].options) == "function")
 			{
-				let option = elem.appendChild(document.createElement("option"));
-				option.value = o;
-				option.innerHTML = categoryFieldOptions[i].options[o];
+				elem.optionsFunction = categoryFieldOptions[i].options;
+				elem.classList.add("dynamicOptions");
+			}
+			else
+			{
+				for(let o in categoryFieldOptions[i].options)
+				{
+					let option = elem.appendChild(document.createElement("option"));
+					option.value = o;
+					option.innerHTML = categoryFieldOptions[i].options[o];
+				}
 			}
 			if(data[i])
+			{
+				elem.defaultValue = data[i];
 				elem.value = data[i];
+			}
 			else
 				elem.selectedIndex = 0;
 		}
@@ -502,8 +586,49 @@ function addCategoryField(content, id, data, floor)
 		elem.id = id+"_"+i;
 		elem.field = idElem;
 		elem.name = i;
-		elem.classList.add("categoryDataEdit");
+		elem.classList.add("categoryDataEdit", "field-"+i);
+		if(categoryFieldOptions[i].condition)
+		{
+			elem.condition = categoryFieldOptions[i].condition;
+			elem.classList.add("conditional");
+		}
+		if(categoryFieldOptions[i].checkConditions)
+		{
+			elem.addEventListener("change", (event) => {
+				checkConditions(table);
+			});
+		}
 	}
+	checkConditions(table);
+}
+
+function checkConditions(fieldContainer)
+{
+	$(fieldContainer).find(".conditional").each((index, element) => {
+		let container = $(element).parents(".categoryFieldOptionContainer");
+		if(element.condition(fieldContainer))
+		{
+			container.show();
+			element.disabled = false;
+		}
+		else
+		{
+			container.hide();
+			element.disabled = true;
+		}
+	});
+	$(fieldContainer).find(".dynamicOptions").each((index, element) => {
+		$(element).empty();
+		let options = element.optionsFunction(fieldContainer);
+		for(let o in options)
+		{
+			let option = element.appendChild(document.createElement("option"));
+			option.value = o;
+			option.innerHTML = options[o];
+		}
+		//if(element.namedItem(element.defaultValue))
+			element.value = element.defaultValue;
+	});
 }
 
 function addDOMElement(parent, elementData, sibling)

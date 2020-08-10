@@ -172,10 +172,11 @@ function listArticles()
 		let list = [];
 		if(database.index.ai) for(let i in database.index.ai)
 		{
-			let article = {};
-			article.id = i;
-			article.t = database.index.ai[i].t;
-			list.push(article);
+			list.push({
+				id: i,
+				t: database.index.ai[i].t,
+				c: database.index.ai[i].c,
+			});
 		}
 		appWindows[0].webContents.send("listArticles", list);
 	}
@@ -196,10 +197,10 @@ function listCategories()
 		let list = [];
 		if(database.index.ci) for(let i in database.index.ci)
 		{
-			let category = {};
-			category.id = i;
-			category.t = database.index.ci[i].t;
-			list.push(category);
+			list.push({
+				id: i,
+				t: database.index.ci[i].t,
+			});
 		}
 		appWindows[0].webContents.send("listCategories", list);
 	}
