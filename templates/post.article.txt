@@ -1,0 +1,6 @@
+{{! You must have elements with the following IDs for these purposes: "articleSaveBtn": Saves the article when clicked; "articleAddCategory": An input element that adds the article to the entered category when 'return' is pressed.}}
+<button id="articleSaveBtn">Save Article</button>
+<div>
+{{#each categories}}<a href="#{{id}}" data-type="category">{{title}}</a>{{/each}}
+</div>
+<input id="articleAddCategory"/>

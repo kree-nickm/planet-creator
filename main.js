@@ -1,8 +1,40 @@
 "use strict";
 const { app, BrowserWindow, Menu, MenuItem, dialog, ipcMain } = require('electron');
 const fs = require('fs');
-const DataManager = require('./DataManager.js');
+const path = require('path');
+const DataManager = require("./DataManager.js");
 const md = require('markdown-it')();
+const Handlebars = require('handlebars');
+
+async function compileHandlebarTemplates()
+{
+	let files = await fs.promises.readdir("templates");
+	for(let i in files)
+	{
+		if(path.extname(files[i]).toLowerCase() == ".txt")
+		{
+			let tFile = "templates" + path.sep + files[i];
+			let cFile = "templates" + path.sep + path.basename(files[i],".txt") + ".js";
+			let tStat = await fs.promises.stat(tFile);
+			let tModTime = tStat.mtimeMs;
+			let cModTime;
+			try
+			{
+				let cStat = await fs.promises.stat(cFile);
+				cModTime = cStat.mtimeMs;
+			}
+			catch(err)
+			{
+				cModTime = 0;
+			}
+			if(cModTime < tModTime)
+			{
+				let input = await fs.promises.readFile(tFile, {encoding:"utf-8"});
+				await fs.promises.writeFile(cFile, "module.exports="+Handlebars.precompile(input));
+			}
+		}
+	}
+}
 
 const database = new DataManager();
 const appWindows = [];
@@ -10,6 +42,7 @@ const prefs = {};
 
 app.whenReady().then(async () => {
 	let prefsTemp = await database.loadJSON("prefs.json");
+	await compileHandlebarTemplates();
 	for(let i in prefsTemp)
 		prefs[i] = prefsTemp[i];
 	createWindow();

@@ -1,6 +1,6 @@
 "use strict";
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 /*
 setting.json should contain the minimum amount of information that should be loaded for every single article at all times.
@@ -315,7 +315,7 @@ module.exports = function(){
 	};
 	
 	this.convertToID = function(string){
-		return string.toLowerCase().replace(" ", "_").replace(/[\\\/]/g, "-").replace(/[^-a-z0-9_]/g, "");
+		return string.toLowerCase().replace(/[ .,]/g, "_").replace(/[\\\/]/g, "-").replace(/[^-a-z0-9_]/g, "");
 	};
 	
 	this.generateHash = function(string){

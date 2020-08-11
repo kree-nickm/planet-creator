@@ -1,0 +1,22 @@
+{{#each fields}}
+<div class="articleDataContainer reading">
+{{#if isselect}}
+	<select class="articleDataEdit" data-category="{{../category}}" data-field="{{field}}" title="{{description}}">
+		<option value="">Select {{name}}...</option>
+{{#each options}}
+		<option value="{{value}}"{{#if selected}} selected="selected"{{/if}}>{{label}}</option>
+{{/each}}
+	</select>
+{{else if istextarea}}
+	<textarea placeholder="{{name}}" class="articleDataEdit" data-category="{{../category}}" data-field="{{field}}" title="{{description}}">{{value}}</textarea>
+{{else}}
+	<input type="{{type}}" value="{{value}}" placeholder="{{name}}" class="articleDataEdit" data-category="{{../category}}" data-field="{{field}}" title="{{description}}"/>
+{{/if}}
+{{#unless ishidden}}
+	<div class="articleDataRead">
+		<button class="edit">edit</button>
+		<span>{{{valueParsed}}}</span>
+	</div>
+{{/unless}}
+</div>
+{{/each}}

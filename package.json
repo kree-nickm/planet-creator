@@ -12,6 +12,7 @@
 		"start": "electron ."
 	},
 	"dependencies": {
+		"handlebars": "^4.7.6",
 		"markdown-it": "^11.0.0",
 		"jquery": "^3.5.1",
 		"jquery-ui-dist": "^1.12.1"

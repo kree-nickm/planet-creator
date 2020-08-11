@@ -1,8 +1,9 @@
 const { ipcRenderer } = require('electron');
 const fs = require('fs');
-const maps = require('./MapManager.js');
+const maps = require("./MapManager.js");
 const $ = jQuery = require('jquery');
-require('./node_modules/jquery-ui-dist/jquery-ui.min.js');
+require("./node_modules/jquery-ui-dist/jquery-ui.min.js");
+const Handlebars = require("handlebars");
 
 const Renderer = new (function(){
 	this.categoriesList = [];
@@ -104,6 +105,7 @@ ipcRenderer.on("listCategories", (event, list) => {
 
 ipcRenderer.on("loadArticle", (event, id, data, bonusData, categories) => {
 	//console.log("loadArticle", id, data, bonusData, categories);
+	ipcRenderer._events.setView(event, "articles");
 	data.f['*'].id = id;
 	data.categories = categories;
 	for(let c in bonusData.f)
@@ -114,6 +116,7 @@ ipcRenderer.on("loadArticle", (event, id, data, bonusData, categories) => {
 
 ipcRenderer.on("loadCategory", (event, id, data) => {
 	//console.log("loadCategory", id, data);
+	ipcRenderer._events.setView(event, "categories");
 	data.id = id;
 	addCategoryFields(data);
 });
@@ -164,146 +167,107 @@ function sortByID(a, b) {
 
 function addArticleFields(data)
 {
-	let content = document.getElementById("articlesContent");
-	while(content.hasChildNodes())
-		content.removeChild(content.firstChild);
-	let categoryList = addDOMElement(content, {
-		tagName: "div",
-	});
-	let handledFields = [];
+	let content = $("#articlesContent");
+	content.empty();
+	let templateGenericData = {
+		categories: [],
+	};
+	for(let i in data.c)
+	{
+		if(data.c[i] != "*")
+			templateGenericData.categories.push({id:data.c[i], title:Renderer.categoryIndex[data.c[i]].t});
+	}
+	let preTemplate = Handlebars.template(require("./templates/pre.article.js"));
+	content.append(preTemplate(templateGenericData));
 	for(let i in data.categories)
 	{
-		if(i != "*")
-		{
-			let categoryLabel = addDOMElement(categoryList, {
-				tagName: "span",
-				innerHTML: data.categories[i].t ? data.categories[i].t : data.categories[i].id,
-				classes: ["categoryLabel"],
-			});
-		}
+		let templateFile;
+		if(i == "*")
+			templateFile = "templates/global.category.js";
+		else
+			templateFile = "templates/"+ i +".js";
+		let template;
+		if(fs.existsSync(templateFile))
+			template = Handlebars.template(require("./"+ templateFile));
+		else
+			template = Handlebars.template(require("./templates/default.category.js"));
+		let templateFieldData = {
+			fields: [],
+			category: i,
+		};
 		for(let f in data.categories[i].f)
 		{
-			handledFields.push(i+"_"+f);
-			if(i == "*" && f == "id" && !data.f[i][f])
-				continue;
-			
-			let container = document.createElement("div");
-			container.classList.add("articleDataContainer", "reading");
-			content.insertBefore(container, categoryList);
-			
-			// Setup edit box.
-			let editElem;
-			if(data.categories[i].f[f].t == "textarea")
+			let fieldData = {};
+			templateFieldData.fields.push(fieldData);
+			if(data.f[i] && data.f[i][f])
+				fieldData.value = data.f[i][f];
+			else
+				fieldData.value = "";
+			fieldData.valueParsed = fieldData.value;
+			fieldData.name = data.categories[i].f[f].n;
+			fieldData.description = data.categories[i].f[f].d;
+			fieldData.field = f;
+			fieldData.type = data.categories[i].f[f].t;
+			fieldData.istextarea = (data.categories[i].f[f].t == "textarea");
+			fieldData.ishidden = (data.categories[i].f[f].t == "hidden");
+			if(data.categories[i].f[f].t == "select")
 			{
-				editElem = document.createElement("textarea");
-			}
-			else if(data.categories[i].f[f].t == "select")
-			{
-				editElem = document.createElement("select");
-				let options = {};
+				fieldData.isselect = true;
+				fieldData.options = [];
 				if(data.categories[i].f[f].f == "category")
 				{
 					for(let k in Renderer.articleIndex)
 					{
 						if(Renderer.articleIndex[k].c.indexOf(data.categories[i].f[f].g) > -1)
-							options[k] = Renderer.articleIndex[k].t;
+						{
+							fieldData.options.push({value:k, label:Renderer.articleIndex[k].t});
+							if(k == fieldData.value)
+								fieldData.options[fieldData.options.length-1].selected = true;
+						}
 					}
+					if(Renderer.articleIndex[fieldData.value])
+						fieldData.valueParsed = Renderer.articleIndex[fieldData.value].t;
 				}
 				else if(data.categories[i].f[f].f == "articles")
 				{
 					for(let k in Renderer.articleIndex)
 					{
-						options[k] = Renderer.articleIndex[k].t;
+						fieldData.options.push({value:k, label:Renderer.articleIndex[k].t});
+						if(k == fieldData.value)
+							fieldData.options[fieldData.options.length-1].selected = true;
 					}
-				}
-				let option = editElem.appendChild(document.createElement("option"));
-				option.value = "";
-				option.innerHTML = "";
-				for(let o in options)
-				{
-					let option = editElem.appendChild(document.createElement("option"));
-					option.value = o;
-					option.innerHTML = options[o];
+					if(Renderer.articleIndex[fieldData.value])
+						fieldData.valueParsed = Renderer.articleIndex[fieldData.value].t;
 				}
 			}
-			else
-			{
-				editElem = document.createElement("input");
-				editElem.type = data.categories[i].f[f].t ? data.categories[i].f[f].t : "text";
-			}
-			editElem.field = f;
-			editElem.category = i;
-			if(data.f[i] && data.f[i][f])
-			{
-				editElem.defaultValue = data.f[i][f];
-				editElem.value = data.f[i][f];
-			}
-			if(data.categories[i].f[f].n)
-				editElem.placeholder = data.categories[i].f[f].n;
-			if(data.categories[i].f[f].d)
-				editElem.title = data.categories[i].f[f].d;
-			editElem.classList.add("articleDataEdit");
-			container.appendChild(editElem);
-			
-			// Setup read box.
-			if(editElem.type != "hidden")
-			{
-				let readElem = addDOMElement(container, {
-					tagName: "div",
-					classes: ["articleDataRead"],
-				});
-				let readText = addDOMElement(readElem, {
-					tagName: "span",
-				});
-				if(data.f[i] && data.f[i][f])
-				{
-					if(data.categories[i].f[f].m)
-					{
-						readText.innerHTML = data.f[i][f+":Markdown"];
-						let links = readText.querySelectorAll("a[href^='#']");
-						links.forEach((node, idx, list) => {
-							node.addEventListener("click", handleArticleLink);
-							if(node.hash.startsWith("##"))
-								node.classList.add("broken");
-						});
-					}
-					else
-						readText.innerHTML = data.f[i][f];
-				}
-				else
-				{
-					readText.innerHTML = "";
-					container.classList.add("editing");
-					container.classList.remove("reading");
-					if(!document.getElementById("saveArticle"))
-					{
-						addSaveButton(content);
-					}
-				}
-				let editButton = addDOMElement(readElem, {
-					tagName: "button",
-					innerHTML: "edit",
-					classes: ["edit"],
-				});
-				editButton.addEventListener("click", (event) => {
-					container.classList.add("editing");
-					container.classList.remove("reading");
-					if(!document.getElementById("saveArticle"))
-					{
-						addSaveButton(content);
-					}
-				});
-			}
+			if(data.categories[i].f[f].m && data.f[i] && data.f[i][f+':Markdown'])
+				fieldData.valueParsed = data.f[i][f+':Markdown'];
 		}
+		content.append(template(templateFieldData));
 	}
-	let addCategory = addDOMElement(content, {
-		tagName: "input",
+	let postTemplate = Handlebars.template(require("./templates/post.article.js"));
+	content.append(postTemplate(templateGenericData));
+	content.find(".articleDataContainer .articleDataEdit").each((index, element) => {
+		if($(element).val() == "")
+			$(element).parents(".articleDataContainer").removeClass("reading").addClass("editing");
 	});
-	$(addCategory).autocomplete({
+	
+	// Add dynamic stuff.
+	content.find(".articleDataContainer .edit").click((event) => {
+		$(event.target).parents(".articleDataContainer").removeClass("reading").addClass("editing");
+	});
+	content.find("a[href^='#']").each((idx, node) => {
+		if($(node).data("type") == "category")
+			node.addEventListener("click", handleCategoryLink);
+		else
+			node.addEventListener("click", handleArticleLink);
+		if(node.hash.startsWith("##"))
+			node.classList.add("broken");
+	});
+	content.find("#articleAddCategory").autocomplete({
 		source: Renderer.categoriesList,
 		delay: 0,
-	});
-	addCategory.addEventListener("keydown", event => {
+	}).keydown(event => {
 		if(event.keyCode == 13)
 		{
 			ipcRenderer.send("addArticleCategory", {
@@ -313,28 +277,15 @@ function addArticleFields(data)
 			});
 			event.target.value = "";
 		}
-		//else
-		//	console.log(event);
 	});
-}
-
-function addSaveButton(content)
-{
-	let save = addDOMElement(content, {
-		tagName: "input",
-		id: "saveArticle",
-		type: "button",
-		value: "Save Article",
-	});
-	save.addEventListener("click", event => {
+	content.find("#articleSaveBtn").click(event => {
 		let data = {f:{}};
-		let dataElements = document.querySelectorAll(".articleDataEdit");
-		dataElements.forEach((node, idx, list) => {
-			if(node.value != "")
+		$(".articleDataEdit").each((idx, node) => {
+			if($(node).val() != "")
 			{
-				if(!data.f[node.category])
-					data.f[node.category] = {};
-				data.f[node.category][node.field] = node.value;
+				if(!data.f[$(node).data("category")])
+					data.f[$(node).data("category")] = {};
+				data.f[$(node).data("category")][$(node).data("field")] = node.value;
 			}
 		});
 		ipcRenderer.send("saveArticle", data);
