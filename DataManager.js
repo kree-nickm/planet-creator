@@ -153,7 +153,6 @@ module.exports = function(){
 			if(data.id)
 			{
 				desiredID = data.id;
-				delete data.id;
 			}
 			else
 			{
@@ -172,7 +171,6 @@ module.exports = function(){
 			if(data.f['*'].id)
 			{
 				desiredID = data.f['*'].id;
-				delete data.f['*'].id;
 			}
 			else
 			{
@@ -225,28 +223,32 @@ module.exports = function(){
 		}
 		else
 		{
-			if(data.f)
-			{
-				if(metaJSON[finalID].f)
-				{
-					for(let c in data.f)
-					{
-						if(metaJSON[finalID].f[c])
-						{
-							for(let f in data.f[c])
-							{
-								metaJSON[finalID].f[c][f] = data.f[c][f];
-							}
-						}
-						else
-							metaJSON[finalID].f[c] = data.f[c];
-					}
-				}
-				else
-					metaJSON[finalID].f = data.f;
-			}
+			if(!data.f)
+				data.f = {};
 			if(data.c)
+			{
 				metaJSON[finalID].c = data.c;
+				for(let i in data.c)
+					if(!data.f[data.c[i]])
+						data.f[data.c[i]] = {};
+			}
+			if(metaJSON[finalID].f)
+			{
+				for(let c in data.f)
+				{
+					if(metaJSON[finalID].f[c])
+					{
+						for(let f in data.f[c])
+						{
+							metaJSON[finalID].f[c][f] = data.f[c][f];
+						}
+					}
+					else
+						metaJSON[finalID].f[c] = data.f[c];
+				}
+			}
+			else
+				metaJSON[finalID].f = data.f;
 		}
 		metaJSON[finalID].z = Date.now()/1000;
 		if(!metaJSON[finalID].a)

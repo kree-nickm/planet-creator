@@ -5,9 +5,20 @@ The 'tag' property is the first argument of Handlebars.registerHelper, 'fn' is t
 */
 module.exports = [
 	{
+		tag: "categoryPartial",
+		fn: function(categoryId, options) {
+			if(arguments.length != 2)
+			{
+				console.error('categoryPartial requires exactly one argument');
+				return "";
+			}
+			return "article."+categoryId;
+		},
+	},
+	{
 		tag: "ifeq",
 		fn: function(variable, value, options) {
-			if (arguments.length != 3)
+			if(arguments.length != 3)
 			{
 				console.error('#ifeq requires exactly two arguments');
 				return "";
@@ -21,7 +32,7 @@ module.exports = [
 	{
 		tag: "unlesseq",
 		fn: function(variable, value, options) {
-			if (arguments.length != 3)
+			if(arguments.length != 3)
 			{
 				console.error('#unlesseq requires exactly two arguments');
 				return "";

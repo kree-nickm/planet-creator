@@ -60,7 +60,7 @@ app.on("window-all-closed", () => {
 ipcMain.on("saveArticle", async (event, data) => {
 	if(database.index)
 	{
-		let id = data.f['*'].id; // store it because saveData will delete it.
+		let id = data.f['*'].id;
 		if(await database.saveData(data, false, !!id))
 		{
 			sendArticles();
@@ -128,7 +128,7 @@ ipcMain.on("loadArticle", async (event, findData) => {
 ipcMain.on("saveCategory", async (event, data) => {
 	if(database.index)
 	{
-		let id = data.id; // store it because saveData will delete it.
+		let id = data.id;
 		if(await database.saveData(data, true, !!id))
 		{
 			sendArticles();

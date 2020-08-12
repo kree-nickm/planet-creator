@@ -19,11 +19,11 @@ module.exports={"1":function(container,depth0,helpers,partials,data,blockParams,
     };
 
   return "	<select class=\"articleDataEdit\" data-category=\""
-    + alias1(container.lambda((depths[1] != null ? lookupProperty(depths[1],"category") : depths[1]), depth0))
+    + alias1(container.lambda((depths[1] != null ? lookupProperty(depths[1],"id") : depths[1]), depth0))
     + "\" data-field=\""
-    + alias1(((helper = (helper = lookupProperty(helpers,"field") || (depth0 != null ? lookupProperty(depth0,"field") : depth0)) != null ? helper : alias3),(typeof helper === alias4 ? helper.call(alias2,{"name":"field","hash":{},"data":data,"loc":{"start":{"line":4,"column":77},"end":{"line":4,"column":86}}}) : helper)))
+    + alias1(((helper = (helper = lookupProperty(helpers,"field") || (depth0 != null ? lookupProperty(depth0,"field") : depth0)) != null ? helper : alias3),(typeof helper === alias4 ? helper.call(alias2,{"name":"field","hash":{},"data":data,"loc":{"start":{"line":4,"column":71},"end":{"line":4,"column":80}}}) : helper)))
     + "\" title=\""
-    + alias1(((helper = (helper = lookupProperty(helpers,"description") || (depth0 != null ? lookupProperty(depth0,"description") : depth0)) != null ? helper : alias3),(typeof helper === alias4 ? helper.call(alias2,{"name":"description","hash":{},"data":data,"loc":{"start":{"line":4,"column":95},"end":{"line":4,"column":110}}}) : helper)))
+    + alias1(((helper = (helper = lookupProperty(helpers,"description") || (depth0 != null ? lookupProperty(depth0,"description") : depth0)) != null ? helper : alias3),(typeof helper === alias4 ? helper.call(alias2,{"name":"description","hash":{},"data":data,"loc":{"start":{"line":4,"column":89},"end":{"line":4,"column":104}}}) : helper)))
     + "\">\n		<option value=\"\">Select "
     + alias1(((helper = (helper = lookupProperty(helpers,"name") || (depth0 != null ? lookupProperty(depth0,"name") : depth0)) != null ? helper : alias3),(typeof helper === alias4 ? helper.call(alias2,{"name":"name","hash":{},"data":data,"loc":{"start":{"line":5,"column":26},"end":{"line":5,"column":34}}}) : helper)))
     + "...</option>\n"
@@ -66,13 +66,13 @@ module.exports={"1":function(container,depth0,helpers,partials,data,blockParams,
   return "	<textarea placeholder=\""
     + alias4(((helper = (helper = lookupProperty(helpers,"name") || (depth0 != null ? lookupProperty(depth0,"name") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"name","hash":{},"data":data,"loc":{"start":{"line":11,"column":24},"end":{"line":11,"column":32}}}) : helper)))
     + "\" class=\"articleDataEdit\" data-category=\""
-    + alias4(container.lambda((depths[1] != null ? lookupProperty(depths[1],"category") : depths[1]), depth0))
+    + alias4(container.lambda((depths[1] != null ? lookupProperty(depths[1],"id") : depths[1]), depth0))
     + "\" data-field=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"field") || (depth0 != null ? lookupProperty(depth0,"field") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"field","hash":{},"data":data,"loc":{"start":{"line":11,"column":102},"end":{"line":11,"column":111}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"field") || (depth0 != null ? lookupProperty(depth0,"field") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"field","hash":{},"data":data,"loc":{"start":{"line":11,"column":96},"end":{"line":11,"column":105}}}) : helper)))
     + "\" title=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"description") || (depth0 != null ? lookupProperty(depth0,"description") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"description","hash":{},"data":data,"loc":{"start":{"line":11,"column":120},"end":{"line":11,"column":135}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"description") || (depth0 != null ? lookupProperty(depth0,"description") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"description","hash":{},"data":data,"loc":{"start":{"line":11,"column":114},"end":{"line":11,"column":129}}}) : helper)))
     + "\">"
-    + alias4(((helper = (helper = lookupProperty(helpers,"value") || (depth0 != null ? lookupProperty(depth0,"value") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"value","hash":{},"data":data,"loc":{"start":{"line":11,"column":137},"end":{"line":11,"column":146}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"value") || (depth0 != null ? lookupProperty(depth0,"value") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"value","hash":{},"data":data,"loc":{"start":{"line":11,"column":131},"end":{"line":11,"column":140}}}) : helper)))
     + "</textarea>\n";
 },"9":function(container,depth0,helpers,partials,data,blockParams,depths) {
     var helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3="function", alias4=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
@@ -89,11 +89,11 @@ module.exports={"1":function(container,depth0,helpers,partials,data,blockParams,
     + "\" placeholder=\""
     + alias4(((helper = (helper = lookupProperty(helpers,"name") || (depth0 != null ? lookupProperty(depth0,"name") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"name","hash":{},"data":data,"loc":{"start":{"line":13,"column":55},"end":{"line":13,"column":63}}}) : helper)))
     + "\" class=\"articleDataEdit\" data-category=\""
-    + alias4(container.lambda((depths[1] != null ? lookupProperty(depths[1],"category") : depths[1]), depth0))
+    + alias4(container.lambda((depths[1] != null ? lookupProperty(depths[1],"id") : depths[1]), depth0))
     + "\" data-field=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"field") || (depth0 != null ? lookupProperty(depth0,"field") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"field","hash":{},"data":data,"loc":{"start":{"line":13,"column":133},"end":{"line":13,"column":142}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"field") || (depth0 != null ? lookupProperty(depth0,"field") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"field","hash":{},"data":data,"loc":{"start":{"line":13,"column":127},"end":{"line":13,"column":136}}}) : helper)))
     + "\" title=\""
-    + alias4(((helper = (helper = lookupProperty(helpers,"description") || (depth0 != null ? lookupProperty(depth0,"description") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"description","hash":{},"data":data,"loc":{"start":{"line":13,"column":151},"end":{"line":13,"column":166}}}) : helper)))
+    + alias4(((helper = (helper = lookupProperty(helpers,"description") || (depth0 != null ? lookupProperty(depth0,"description") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"description","hash":{},"data":data,"loc":{"start":{"line":13,"column":145},"end":{"line":13,"column":160}}}) : helper)))
     + "\"/>\n";
 },"11":function(container,depth0,helpers,partials,data) {
     var stack1, helper, lookupProperty = container.lookupProperty || function(parent, propertyName) {

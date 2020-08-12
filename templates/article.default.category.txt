@@ -1,16 +1,16 @@
 {{#each fields}}
 <div class="articleDataContainer reading">
 {{#ifeq type "select"}}
-	<select class="articleDataEdit" data-category="{{../category}}" data-field="{{field}}" title="{{description}}">
+	<select class="articleDataEdit" data-category="{{../id}}" data-field="{{field}}" title="{{description}}">
 		<option value="">Select {{name}}...</option>
 {{#each options}}
 		<option value="{{value}}"{{#if selected}} selected="selected"{{/if}}>{{label}}</option>
 {{/each}}
 	</select>
 {{else ifeq type "textarea"}}
-	<textarea placeholder="{{name}}" class="articleDataEdit" data-category="{{../category}}" data-field="{{field}}" title="{{description}}">{{value}}</textarea>
+	<textarea placeholder="{{name}}" class="articleDataEdit" data-category="{{../id}}" data-field="{{field}}" title="{{description}}">{{value}}</textarea>
 {{else}}
-	<input type="{{type}}" value="{{value}}" placeholder="{{name}}" class="articleDataEdit" data-category="{{../category}}" data-field="{{field}}" title="{{description}}"/>
+	<input type="{{type}}" value="{{value}}" placeholder="{{name}}" class="articleDataEdit" data-category="{{../id}}" data-field="{{field}}" title="{{description}}"/>
 {{/ifeq}}
 {{#unlesseq type "hidden"}}
 	<div class="articleDataRead">

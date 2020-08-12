@@ -175,53 +175,56 @@ function addArticleFields(data)
 {
 	let content = $("#articlesContent");
 	content.empty();
-	let templateGenericData = {
+	let templateData = {
 		categories: [],
 	};
-	for(let i in data.c)
+	// TODO: Show orphaned fields (if a category is removed from an article when it still had fields filled in, those are now orphaned.
+	for(let c in data.categories)
 	{
-		if(data.c[i] != "*")
-			templateGenericData.categories.push({id:data.c[i], title:Renderer.categoryIndex[data.c[i]].t});
-	}
-	let preTemplate = Handlebars.template(require("./templates/pre.article.js"));
-	content.append(preTemplate(templateGenericData));
-	for(let i in data.categories)
-	{
+		// Determine template file for this category.
 		let templateFile;
-		if(i == "*")
-			templateFile = "templates/global.category.js";
+		if(c == "*")
+			templateFile = "templates/article.global.category.js";
 		else
-			templateFile = "templates/"+ i +".js";
-		let template;
+			templateFile = "templates/article."+ c +".js";
+		
+		// Register partial template from above file
+		let partial;
 		if(fs.existsSync(templateFile))
-			template = Handlebars.template(require("./"+ templateFile));
+			partial = Handlebars.template(require("./"+ templateFile));
 		else
-			template = Handlebars.template(require("./templates/default.category.js"));
+			partial = Handlebars.template(require("./templates/article.default.category.js"));
+		Handlebars.registerPartial("article."+c, partial);
+		
+		// Build data to send to template.
 		let templateFieldData = {
+			id: c,
+			title: data.categories[c].t,
 			fields: [],
-			category: i,
+			actual: true,
 		};
-		for(let f in data.categories[i].f)
+		templateData.categories.push(templateFieldData);
+		for(let f in data.categories[c].f)
 		{
 			let fieldData = {};
 			templateFieldData.fields.push(fieldData);
-			if(data.f[i] && data.f[i][f])
-				fieldData.value = data.f[i][f];
+			if(data.f[c] && data.f[c][f])
+				fieldData.value = data.f[c][f];
 			else
 				fieldData.value = "";
 			fieldData.valueParsed = fieldData.value;
-			fieldData.name = data.categories[i].f[f].n;
-			fieldData.description = data.categories[i].f[f].d;
+			fieldData.name = data.categories[c].f[f].n;
+			fieldData.description = data.categories[c].f[f].d;
 			fieldData.field = f;
-			fieldData.type = data.categories[i].f[f].t;
-			if(data.categories[i].f[f].t == "select")
+			fieldData.type = data.categories[c].f[f].t;
+			if(data.categories[c].f[f].t == "select")
 			{
 				fieldData.options = [];
-				if(data.categories[i].f[f].f == "category")
+				if(data.categories[c].f[f].f == "category")
 				{
 					for(let k in Renderer.articleIndex)
 					{
-						if(Renderer.articleIndex[k].c.indexOf(data.categories[i].f[f].g) > -1)
+						if(Renderer.articleIndex[k].c.indexOf(data.categories[c].f[f].g) > -1)
 						{
 							fieldData.options.push({value:k, label:Renderer.articleIndex[k].t});
 							if(k == fieldData.value)
@@ -231,7 +234,7 @@ function addArticleFields(data)
 					if(Renderer.articleIndex[fieldData.value])
 						fieldData.valueParsed = Renderer.articleIndex[fieldData.value].t;
 				}
-				else if(data.categories[i].f[f].f == "articles")
+				else if(data.categories[c].f[f].f == "articles")
 				{
 					for(let k in Renderer.articleIndex)
 					{
@@ -243,13 +246,12 @@ function addArticleFields(data)
 						fieldData.valueParsed = Renderer.articleIndex[fieldData.value].t;
 				}
 			}
-			if(data.categories[i].f[f].m && data.f[i] && data.f[i][f+':Markdown'])
-				fieldData.valueParsed = data.f[i][f+':Markdown'];
+			if(data.categories[c].f[f].m && data.f[c] && data.f[c][f+':Markdown'])
+				fieldData.valueParsed = data.f[c][f+':Markdown'];
 		}
-		content.append(template(templateFieldData));
 	}
-	let postTemplate = Handlebars.template(require("./templates/post.article.js"));
-	content.append(postTemplate(templateGenericData));
+	let template = Handlebars.template(require("./templates/article.js"));
+	content.append(template(templateData));
 	content.find(".articleDataContainer .articleDataEdit").each((index, element) => {
 		if($(element).val() == "")
 			$(element).parents(".articleDataContainer").removeClass("reading").addClass("editing");
@@ -284,12 +286,9 @@ function addArticleFields(data)
 	content.find("#articleSaveBtn").click(event => {
 		let data = {f:{}};
 		$(".articleDataEdit").each((idx, node) => {
-			if($(node).val() != "")
-			{
-				if(!data.f[$(node).data("category")])
-					data.f[$(node).data("category")] = {};
-				data.f[$(node).data("category")][$(node).data("field")] = node.value;
-			}
+			if(!data.f[$(node).data("category")])
+				data.f[$(node).data("category")] = {};
+			data.f[$(node).data("category")][$(node).data("field")] = $(node).val();
 		});
 		ipcRenderer.send("saveArticle", data);
 	});
