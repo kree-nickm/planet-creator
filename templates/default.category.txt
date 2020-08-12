@@ -1,22 +1,22 @@
 {{#each fields}}
 <div class="articleDataContainer reading">
-{{#if isselect}}
+{{#ifeq type "select"}}
 	<select class="articleDataEdit" data-category="{{../category}}" data-field="{{field}}" title="{{description}}">
 		<option value="">Select {{name}}...</option>
 {{#each options}}
 		<option value="{{value}}"{{#if selected}} selected="selected"{{/if}}>{{label}}</option>
 {{/each}}
 	</select>
-{{else if istextarea}}
+{{else ifeq type "textarea"}}
 	<textarea placeholder="{{name}}" class="articleDataEdit" data-category="{{../category}}" data-field="{{field}}" title="{{description}}">{{value}}</textarea>
 {{else}}
 	<input type="{{type}}" value="{{value}}" placeholder="{{name}}" class="articleDataEdit" data-category="{{../category}}" data-field="{{field}}" title="{{description}}"/>
-{{/if}}
-{{#unless ishidden}}
+{{/ifeq}}
+{{#unlesseq type "hidden"}}
 	<div class="articleDataRead">
 		<button class="edit">edit</button>
 		<span>{{{valueParsed}}}</span>
 	</div>
-{{/unless}}
+{{/unlesseq}}
 </div>
 {{/each}}

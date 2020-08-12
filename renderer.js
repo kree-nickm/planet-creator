@@ -3,7 +3,13 @@ const fs = require('fs');
 const maps = require("./MapManager.js");
 const $ = jQuery = require('jquery');
 require("./node_modules/jquery-ui-dist/jquery-ui.min.js");
-const Handlebars = require("handlebars");
+const Handlebars = require('handlebars');
+
+const customHelpers = require("./templates/handlebars.helpers.js");
+for(let i in customHelpers)
+{
+	Handlebars.registerHelper(customHelpers[i].tag, customHelpers[i].fn);
+}
 
 const Renderer = new (function(){
 	this.categoriesList = [];
@@ -208,11 +214,8 @@ function addArticleFields(data)
 			fieldData.description = data.categories[i].f[f].d;
 			fieldData.field = f;
 			fieldData.type = data.categories[i].f[f].t;
-			fieldData.istextarea = (data.categories[i].f[f].t == "textarea");
-			fieldData.ishidden = (data.categories[i].f[f].t == "hidden");
 			if(data.categories[i].f[f].t == "select")
 			{
-				fieldData.isselect = true;
 				fieldData.options = [];
 				if(data.categories[i].f[f].f == "category")
 				{
