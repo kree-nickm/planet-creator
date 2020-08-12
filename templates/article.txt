@@ -2,10 +2,14 @@
 {{#each categories}}
 {{> (categoryPartial id) }}
 {{/each}}
-<button id="articleSaveBtn">Save Article</button>
-<div>
-	{{#each categories}}
-	{{#if actual}}{{#unlesseq id "*"}}<a href="#{{id}}" data-type="category">{{title}}</a>{{/unlesseq}}{{/if}}
-	{{/each}}
+<hr/>
+<button class="articleSaveBtn">Save Article</button>
+<div class="articleCategoriesContainer">
+	<b>Categories: </b>
+	<label class="articleCategories" for="articleAddCategory">
+		{{#each categories}}
+		{{#if actual}}{{#unlesseq id "*"}}<a href="#{{id}}" data-type="category">{{title}}</a>{{/unlesseq}}{{/if}}
+		{{/each}}
+		<input id="articleAddCategory" class="articleAddCategory"/>
+	</label>
 </div>
-<input id="articleAddCategory"/>

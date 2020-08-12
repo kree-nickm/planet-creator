@@ -7,14 +7,240 @@ const Handlebars = require('handlebars');
 
 const customHelpers = require("./templates/handlebars.helpers.js");
 for(let i in customHelpers)
-{
 	Handlebars.registerHelper(customHelpers[i].tag, customHelpers[i].fn);
-}
 
 const Renderer = new (function(){
 	this.categoriesList = [];
 	this.articleIndex = {};
 	this.categoryIndex = {};
+	this.stringCollator = new Intl.Collator("en");
+	this.categoryFieldOptions = {
+		'n': {
+			type: "text",
+			label: "Field Name",
+		},
+		't': {
+			checkConditions: true,
+			type: "select",
+			label: "Field Type",
+			options: {
+				"text": "Single Line",
+				"textarea": "Paragraphs",
+				"number": "Number",
+				"date": "Date",
+				"datetime-local": "Date and Time",
+				"file": "File of Specified Type",
+				"url": "URL",
+				"select": "Predefined Options",
+			},
+		},
+		'f': {
+			checkConditions: true,
+			condition: function(fieldContainer){
+				let type = $(fieldContainer).find(".field-t").val();
+				return type == "select";
+			},
+			type: "select",
+			label: "Option Filter",
+			options: {
+				"articles": "All Articles",
+				"category": "Articles in Specified Category",
+			},
+		},
+		'g': {
+			condition: function(fieldContainer){
+				let type = $(fieldContainer).find(".field-t").val();
+				let filter = $(fieldContainer).find(".field-f").val();
+				return type == "select" && (filter == "category") || type == "file";
+			},
+			type: "select",
+			label: "Specify",
+			options: function(fieldContainer){
+				let type = $(fieldContainer).find(".field-t").val();
+				if(type == "select")
+				{
+					let filter = $(fieldContainer).find(".field-f").val();
+					switch(filter)
+					{
+						case "category":
+							let result = {}
+							for(let i in Renderer.categoryIndex)
+								result[i] = Renderer.categoryIndex[i].t;
+							return result;
+							break;
+					}
+				}
+				else if(type == "file")
+				{
+					return {
+						'*': "All Files",
+						'image/*': "Images",
+					};
+				}
+			},
+		},
+		'm': {
+			condition: function(fieldContainer){
+				let type = $(fieldContainer).find(".field-t").val();
+				return type == "text" || type == "textarea";
+			},
+			type: "checkbox",
+			label: "Use Markdown",
+		},
+		'e': {
+			condition: function(fieldContainer){
+				let type = $(fieldContainer).find(".field-t").val();
+				return type == "textarea";
+			},
+			type: "checkbox",
+			label: "Can Get Content From File",
+		},
+	};
+	
+	this.handleArticleLink = function(event)
+	{
+		let hash = event.target.hash;
+		if(hash == "#")
+			ipcRenderer.send("loadArticle", {});
+		else if(hash.startsWith("##"))
+			ipcRenderer.send("loadArticle", {title:event.target.innerHTML});
+		else
+			ipcRenderer.send("loadArticle", {id:hash.substring(1)});
+	};
+	
+	this.handleCategoryLink = function(event)
+	{
+		let hash = event.target.hash;
+		if(hash == "#")
+			ipcRenderer.send("loadCategory", {});
+		else if(hash.startsWith("##"))
+			ipcRenderer.send("loadCategory", {id:hash.substring(2)});
+		else
+			ipcRenderer.send("loadCategory", {id:hash.substring(1)});
+	};
+
+	this.addArticleFields = function(data)
+	{
+		let content = $("#articlesContent");
+		content.empty();
+		let templateData = {
+			categories: [],
+		};
+		// TODO: Show orphaned fields (if a category is removed from an article when it still had fields filled in, those are now orphaned.
+		for(let c in data.categories)
+		{
+			// Determine template file for this category.
+			let templateFile;
+			if(c == "*")
+				templateFile = "templates/article.global.category.js";
+			else
+				templateFile = "templates/article."+ c +".js";
+			
+			// Register partial template from above file
+			let partial;
+			if(fs.existsSync(templateFile))
+				partial = Handlebars.template(require("./"+ templateFile));
+			else
+				partial = Handlebars.template(require("./templates/article.default.category.js"));
+			Handlebars.registerPartial("article."+c, partial);
+			
+			// Build data to send to template.
+			let templateFieldData = {
+				id: c,
+				title: data.categories[c].t,
+				fields: [],
+				actual: true,
+			};
+			templateData.categories.push(templateFieldData);
+			for(let f in data.categories[c].f)
+			{
+				let fieldData = {};
+				templateFieldData.fields.push(fieldData);
+				if(data.f[c] && data.f[c][f])
+					fieldData.value = data.f[c][f];
+				else
+					fieldData.value = "";
+				fieldData.valueParsed = fieldData.value;
+				fieldData.name = data.categories[c].f[f].n;
+				fieldData.description = data.categories[c].f[f].d;
+				fieldData.field = f;
+				fieldData.type = data.categories[c].f[f].t;
+				if(data.categories[c].f[f].t == "select")
+				{
+					fieldData.options = [];
+					if(data.categories[c].f[f].f == "category")
+					{
+						for(let k in Renderer.articleIndex)
+						{
+							if(Renderer.articleIndex[k].c.indexOf(data.categories[c].f[f].g) > -1)
+							{
+								fieldData.options.push({value:k, label:Renderer.articleIndex[k].t});
+								if(k == fieldData.value)
+									fieldData.options[fieldData.options.length-1].selected = true;
+							}
+						}
+						if(Renderer.articleIndex[fieldData.value])
+							fieldData.valueParsed = Renderer.articleIndex[fieldData.value].t;
+					}
+					else if(data.categories[c].f[f].f == "articles")
+					{
+						for(let k in Renderer.articleIndex)
+						{
+							fieldData.options.push({value:k, label:Renderer.articleIndex[k].t});
+							if(k == fieldData.value)
+								fieldData.options[fieldData.options.length-1].selected = true;
+						}
+						if(Renderer.articleIndex[fieldData.value])
+							fieldData.valueParsed = Renderer.articleIndex[fieldData.value].t;
+					}
+				}
+				if(data.categories[c].f[f].m && data.f[c] && data.f[c][f+':Markdown'])
+					fieldData.valueParsed = data.f[c][f+':Markdown'];
+			}
+		}
+		let template = Handlebars.template(require("./templates/article.js"));
+		content.append(template(templateData));
+		content.find(".articleDataContainer .articleDataEdit").each((index, element) => {
+			if($(element).val() == "")
+				$(element).parents(".articleDataContainer").removeClass("reading").addClass("editing");
+		});
+		
+		// Add dynamic stuff.
+		content.find(".articleDataContainer .edit").click((event) => {
+			$(event.target).parents(".articleDataContainer").removeClass("reading").addClass("editing");
+		});
+		content.find("a[href^='#']").each((idx, node) => {
+			if($(node).data("type") == "category")
+				node.addEventListener("click", Renderer.handleCategoryLink);
+			else
+				node.addEventListener("click", Renderer.handleArticleLink);
+			if(node.hash.startsWith("##"))
+				node.classList.add("broken");
+		});
+		content.find(".articleAddCategory").autocomplete({
+			source: Renderer.categoriesList,
+			delay: 0,
+		}).keydown(event => {
+			if(event.keyCode == 13)
+			{
+				ipcRenderer.send("addArticleCategory", {
+					articleID: data.f['*'].id,
+					categoryList: Object.keys(data.categories),
+					newTitle: event.target.value,
+				});
+				event.target.value = "";
+			}
+		});
+		content.find(".articleSaveBtn").click(event => {
+			let data = {f:{}};
+			$(".articleDataEdit").each((idx, node) => {
+				if(!data.f[$(node).data("category")])
+					data.f[$(node).data("category")] = {};
+				data.f[$(node).data("category")][$(node).data("field")] = $(node).val();
+			});
+			ipcRenderer.send("saveArticle", data);
+		});
+	};
 })();
 
 ipcRenderer.on("openMap", (event, mapJSON) => {
@@ -50,7 +276,7 @@ ipcRenderer.on("listArticles", (event, list) => {
 	link.href = "#";
 	link.innerHTML = "Create New...";
 	sidebar.appendChild(link);
-	link.addEventListener("click", handleArticleLink);
+	link.addEventListener("click", Renderer.handleArticleLink);
 	// Add all the articles.
 	if(Array.isArray(list) && list.length)
 	{
@@ -66,7 +292,7 @@ ipcRenderer.on("listArticles", (event, list) => {
 			else
 				link.innerHTML = list[i].id;
 			sidebar.appendChild(link);
-			link.addEventListener("click", handleArticleLink);
+			link.addEventListener("click", Renderer.handleArticleLink);
 		}
 	}
 });
@@ -81,7 +307,7 @@ ipcRenderer.on("listCategories", (event, list) => {
 	link.href = "#";
 	link.innerHTML = "Create New...";
 	sidebar.appendChild(link);
-	link.addEventListener("click", handleCategoryLink);
+	link.addEventListener("click", Renderer.handleCategoryLink);
 	// Add all the categories.
 	if(Array.isArray(list) && list.length)
 	{
@@ -104,7 +330,7 @@ ipcRenderer.on("listCategories", (event, list) => {
 				link.innerHTML = list[i].id;
 			}
 			sidebar.appendChild(link);
-			link.addEventListener("click", handleCategoryLink);
+			link.addEventListener("click", Renderer.handleCategoryLink);
 		}
 	}
 });
@@ -117,7 +343,7 @@ ipcRenderer.on("loadArticle", (event, id, data, bonusData, categories) => {
 	for(let c in bonusData.f)
 		for(let f in bonusData.f[c])
 			data.f[c][f] = bonusData.f[c][f];
-	addArticleFields(data);
+	Renderer.addArticleFields(data);
 });
 
 ipcRenderer.on("loadCategory", (event, id, data) => {
@@ -127,29 +353,6 @@ ipcRenderer.on("loadCategory", (event, id, data) => {
 	addCategoryFields(data);
 });
 
-function handleArticleLink(event)
-{
-	let hash = event.target.hash;
-	if(hash == "#")
-		ipcRenderer.send("loadArticle", {});
-	else if(hash.startsWith("##"))
-		ipcRenderer.send("loadArticle", {title:event.target.innerHTML});
-	else
-		ipcRenderer.send("loadArticle", {id:hash.substring(1)});
-}
-
-function handleCategoryLink(event)
-{
-	let hash = event.target.hash;
-	if(hash == "#")
-		ipcRenderer.send("loadCategory", {});
-	else if(hash.startsWith("##"))
-		ipcRenderer.send("loadCategory", {id:hash.substring(2)});
-	else
-		ipcRenderer.send("loadCategory", {id:hash.substring(1)});
-}
-
-const stringCollator = new Intl.Collator("en");
 function sortByTitle(a, b) {
 	if(!a.t && !b.t)
 		return 0;
@@ -158,7 +361,7 @@ function sortByTitle(a, b) {
 	else if(!b.t)
 		return -1;
 	else
-		return stringCollator.compare(a.t, b.t);
+		return Renderer.stringCollator.compare(a.t, b.t);
 }
 function sortByID(a, b) {
 	if(!a.id && !b.id)
@@ -168,190 +371,9 @@ function sortByID(a, b) {
 	else if(!b.id)
 		return -1;
 	else
-		return stringCollator.compare(a.id, b.id);
+		return Renderer.stringCollator.compare(a.id, b.id);
 }
 
-function addArticleFields(data)
-{
-	let content = $("#articlesContent");
-	content.empty();
-	let templateData = {
-		categories: [],
-	};
-	// TODO: Show orphaned fields (if a category is removed from an article when it still had fields filled in, those are now orphaned.
-	for(let c in data.categories)
-	{
-		// Determine template file for this category.
-		let templateFile;
-		if(c == "*")
-			templateFile = "templates/article.global.category.js";
-		else
-			templateFile = "templates/article."+ c +".js";
-		
-		// Register partial template from above file
-		let partial;
-		if(fs.existsSync(templateFile))
-			partial = Handlebars.template(require("./"+ templateFile));
-		else
-			partial = Handlebars.template(require("./templates/article.default.category.js"));
-		Handlebars.registerPartial("article."+c, partial);
-		
-		// Build data to send to template.
-		let templateFieldData = {
-			id: c,
-			title: data.categories[c].t,
-			fields: [],
-			actual: true,
-		};
-		templateData.categories.push(templateFieldData);
-		for(let f in data.categories[c].f)
-		{
-			let fieldData = {};
-			templateFieldData.fields.push(fieldData);
-			if(data.f[c] && data.f[c][f])
-				fieldData.value = data.f[c][f];
-			else
-				fieldData.value = "";
-			fieldData.valueParsed = fieldData.value;
-			fieldData.name = data.categories[c].f[f].n;
-			fieldData.description = data.categories[c].f[f].d;
-			fieldData.field = f;
-			fieldData.type = data.categories[c].f[f].t;
-			if(data.categories[c].f[f].t == "select")
-			{
-				fieldData.options = [];
-				if(data.categories[c].f[f].f == "category")
-				{
-					for(let k in Renderer.articleIndex)
-					{
-						if(Renderer.articleIndex[k].c.indexOf(data.categories[c].f[f].g) > -1)
-						{
-							fieldData.options.push({value:k, label:Renderer.articleIndex[k].t});
-							if(k == fieldData.value)
-								fieldData.options[fieldData.options.length-1].selected = true;
-						}
-					}
-					if(Renderer.articleIndex[fieldData.value])
-						fieldData.valueParsed = Renderer.articleIndex[fieldData.value].t;
-				}
-				else if(data.categories[c].f[f].f == "articles")
-				{
-					for(let k in Renderer.articleIndex)
-					{
-						fieldData.options.push({value:k, label:Renderer.articleIndex[k].t});
-						if(k == fieldData.value)
-							fieldData.options[fieldData.options.length-1].selected = true;
-					}
-					if(Renderer.articleIndex[fieldData.value])
-						fieldData.valueParsed = Renderer.articleIndex[fieldData.value].t;
-				}
-			}
-			if(data.categories[c].f[f].m && data.f[c] && data.f[c][f+':Markdown'])
-				fieldData.valueParsed = data.f[c][f+':Markdown'];
-		}
-	}
-	let template = Handlebars.template(require("./templates/article.js"));
-	content.append(template(templateData));
-	content.find(".articleDataContainer .articleDataEdit").each((index, element) => {
-		if($(element).val() == "")
-			$(element).parents(".articleDataContainer").removeClass("reading").addClass("editing");
-	});
-	
-	// Add dynamic stuff.
-	content.find(".articleDataContainer .edit").click((event) => {
-		$(event.target).parents(".articleDataContainer").removeClass("reading").addClass("editing");
-	});
-	content.find("a[href^='#']").each((idx, node) => {
-		if($(node).data("type") == "category")
-			node.addEventListener("click", handleCategoryLink);
-		else
-			node.addEventListener("click", handleArticleLink);
-		if(node.hash.startsWith("##"))
-			node.classList.add("broken");
-	});
-	content.find("#articleAddCategory").autocomplete({
-		source: Renderer.categoriesList,
-		delay: 0,
-	}).keydown(event => {
-		if(event.keyCode == 13)
-		{
-			ipcRenderer.send("addArticleCategory", {
-				articleID: data.f['*'].id,
-				categoryList: Object.keys(data.categories),
-				newTitle: event.target.value,
-			});
-			event.target.value = "";
-		}
-	});
-	content.find("#articleSaveBtn").click(event => {
-		let data = {f:{}};
-		$(".articleDataEdit").each((idx, node) => {
-			if(!data.f[$(node).data("category")])
-				data.f[$(node).data("category")] = {};
-			data.f[$(node).data("category")][$(node).data("field")] = $(node).val();
-		});
-		ipcRenderer.send("saveArticle", data);
-	});
-}
-
-const categoryFieldOptions = {
-	'n': {
-		type: "text",
-		label: "Field Name",
-	},
-	't': {
-		checkConditions: true,
-		type: "select",
-		label: "Field Type",
-		options: {
-			"text": "Single Line",
-			"textarea": "Paragraphs",
-			"select": "Predefined Options",
-		},
-	},
-	'f': {
-		checkConditions: true,
-		condition: function(fieldContainer){
-			let type = $(fieldContainer).find(".field-t").val();
-			return type == "select";
-		},
-		type: "select",
-		label: "Option Filter",
-		options: {
-			"articles": "All Articles",
-			"category": "Articles in Specified Category",
-		},
-	},
-	'g': {
-		condition: function(fieldContainer){
-			let type = $(fieldContainer).find(".field-t").val();
-			let filter = $(fieldContainer).find(".field-f").val();
-			return type == "select" && (filter == "category");
-		},
-		type: "select",
-		label: "Specify",
-		options: function(fieldContainer){
-			let filter = $(fieldContainer).find(".field-f").val();
-			switch(filter)
-			{
-				case "category":
-					let result = {}
-					for(let i in Renderer.categoryIndex)
-						result[i] = Renderer.categoryIndex[i].t;
-					return result;
-					break;
-			}
-		},
-	},
-	'm': {
-		condition: function(fieldContainer){
-			let type = $(fieldContainer).find(".field-t").val();
-			return type == "text" || type == "textarea";
-		},
-		type: "checkbox",
-		label: "Use Markdown",
-	},
-};
 function addCategoryFields(data)
 {
 	let content = document.getElementById("categoriesContent");
@@ -382,7 +404,7 @@ function addCategoryFields(data)
 			idElem.name = "id";
 			idElem.classList.add("categoryIDField");
 			
-			for(let i in categoryFieldOptions)
+			for(let i in Renderer.categoryFieldOptions)
 			{
 				let elem = content.insertBefore(document.createElement("input"), floor);
 				elem.id = f+"_"+i;
@@ -430,7 +452,7 @@ function addCategoryFields(data)
 						if(node.checked)
 							newData.f[field][node.name] = true;
 					}
-					else if(categoryFieldOptions[node.name].type == "checkbox")
+					else if(Renderer.categoryFieldOptions[node.name].type == "checkbox")
 					{
 						if(node.value)
 							newData.f[field][node.name] = true;
@@ -478,31 +500,31 @@ function addCategoryField(content, id, data, floor)
 		event.target.target.parentNode.removeChild(event.target.target);
 	});
 	
-	for(let i in categoryFieldOptions)
+	for(let i in Renderer.categoryFieldOptions)
 	{
 		let tr = tbody.appendChild(document.createElement("tr"));
 		tr.classList.add("categoryFieldOptionContainer");
 		let th = tr.appendChild(document.createElement("th"));
 		let label = th.appendChild(document.createElement("label"));
 		label.htmlFor = id+"_"+i;
-		label.innerHTML = categoryFieldOptions[i].label+":";
+		label.innerHTML = Renderer.categoryFieldOptions[i].label+":";
 		let td = tr.appendChild(document.createElement("td"));
 		let elem;
-		if(categoryFieldOptions[i].type == "select")
+		if(Renderer.categoryFieldOptions[i].type == "select")
 		{
 			elem = td.appendChild(document.createElement("select"));
-			if(typeof(categoryFieldOptions[i].options) == "function")
+			if(typeof(Renderer.categoryFieldOptions[i].options) == "function")
 			{
-				elem.optionsFunction = categoryFieldOptions[i].options;
+				elem.optionsFunction = Renderer.categoryFieldOptions[i].options;
 				elem.classList.add("dynamicOptions");
 			}
 			else
 			{
-				for(let o in categoryFieldOptions[i].options)
+				for(let o in Renderer.categoryFieldOptions[i].options)
 				{
 					let option = elem.appendChild(document.createElement("option"));
 					option.value = o;
-					option.innerHTML = categoryFieldOptions[i].options[o];
+					option.innerHTML = Renderer.categoryFieldOptions[i].options[o];
 				}
 			}
 			if(data[i])
@@ -516,8 +538,8 @@ function addCategoryField(content, id, data, floor)
 		else
 		{
 			elem = td.appendChild(document.createElement("input"));
-			elem.type = categoryFieldOptions[i].type;
-			if(categoryFieldOptions[i].type == "checkbox")
+			elem.type = Renderer.categoryFieldOptions[i].type;
+			if(Renderer.categoryFieldOptions[i].type == "checkbox")
 			{
 				elem.value = "1";
 				elem.checked = !!data[i];
@@ -540,12 +562,12 @@ function addCategoryField(content, id, data, floor)
 		elem.field = idElem;
 		elem.name = i;
 		elem.classList.add("categoryDataEdit", "field-"+i);
-		if(categoryFieldOptions[i].condition)
+		if(Renderer.categoryFieldOptions[i].condition)
 		{
-			elem.condition = categoryFieldOptions[i].condition;
+			elem.condition = Renderer.categoryFieldOptions[i].condition;
 			elem.classList.add("conditional");
 		}
-		if(categoryFieldOptions[i].checkConditions)
+		if(Renderer.categoryFieldOptions[i].checkConditions)
 		{
 			elem.addEventListener("change", (event) => {
 				checkConditions(table);
