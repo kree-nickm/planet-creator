@@ -241,6 +241,53 @@ const Renderer = new (function(){
 			ipcRenderer.send("saveArticle", data);
 		});
 	};
+	
+	// Work-in-progress function.
+	this.addCategoryFields = function(data)
+	{
+		let content = $("#categoriesContent");
+		content.empty();
+		let templateData = {
+			options: this.categoryFieldOptions,
+			data: data,
+		};
+		let template = Handlebars.template(require("./templates/category.js"));
+		content.append(template(templateData));
+		
+		// Add dynamic stuff.
+		/*content.find(".categorySaveBtn").click(event => {
+			let newData = {f:{}};
+			if(data.id)
+				newData.id = data.id;
+			else
+				newData.t = document.getElementById("categoryTitle").value;
+			if(newData.id || newData.t)
+			{
+				let dataElements = document.querySelectorAll(".categoryDataEdit");
+				dataElements.forEach((node, idx, list) => {
+					let field = node.field.value;
+					if(field)
+					{
+						if(!newData.f[field])
+							newData.f[field] = {};
+						if(node.type == "checkbox")
+						{
+							if(node.checked)
+								newData.f[field][node.name] = true;
+						}
+						else if(Renderer.categoryFieldOptions[node.name].type == "checkbox")
+						{
+							if(node.value)
+								newData.f[field][node.name] = true;
+						}
+						else if(node.value)
+							newData.f[field][node.name] = node.value;
+					}
+				});
+				ipcRenderer.send("saveCategory", newData);
+			}
+		});*/
+	};
 })();
 
 ipcRenderer.on("openMap", (event, mapJSON) => {
@@ -351,6 +398,7 @@ ipcRenderer.on("loadCategory", (event, id, data) => {
 	ipcRenderer._events.setView(event, "categories");
 	data.id = id;
 	addCategoryFields(data);
+	//Renderer.addCategoryFields(data);
 });
 
 function sortByTitle(a, b) {
@@ -374,13 +422,14 @@ function sortByID(a, b) {
 		return Renderer.stringCollator.compare(a.id, b.id);
 }
 
+// TODO: Finish rewriting these in Renderer.addCategoryFields to use templates.
 function addCategoryFields(data)
 {
 	let content = document.getElementById("categoriesContent");
 	while(content.hasChildNodes())
 		content.removeChild(content.firstChild);
 	if(data.id)
-		content.appendChild(document.createElement("h1")).innerHTML = data.t?data.t:data.id;
+		content.appendChild(document.createElement("h1")).innerHTML = "Category: "+ (data.t?data.t:data.id);
 	else
 	{
 		let titleElem = content.appendChild(document.createElement("input"));
@@ -390,6 +439,38 @@ function addCategoryFields(data)
 		titleElem.id = "categoryTitle";
 		titleElem.placeholder = "Category Title";
 	}
+	
+	let articles = [];
+	for(let a in Renderer.articleIndex)
+	{
+		if(Renderer.articleIndex[a].c.indexOf(data.id) > -1)
+			articles.push({id:a, t:Renderer.articleIndex[a].t});
+	}
+	articles.sort(Renderer.sortByTitle);
+	let articleContainer = content.appendChild(document.createElement("div"));
+	for(let i in articles)
+	{
+		let link = articleContainer.appendChild(document.createElement("a"));
+		link.href = "#"+ articles[i].id;
+		link.innerHTML = articles[i].t;
+	}
+	
+	let categories = [];
+	for(let c in Renderer.categoryIndex)
+	{
+		if(Renderer.categoryIndex[c].c.indexOf(data.id) > -1)
+			categories.push({id:c, t:Renderer.categoryIndex[c].t});
+	}
+	categories.sort(Renderer.sortByTitle);
+	let categoryContainer = content.appendChild(document.createElement("div"));
+	for(let i in categories)
+	{
+		let link = categoryContainer.appendChild(document.createElement("a"));
+		link.href = "#"+ categories[i].id;
+		link.innerHTML = categories[i].t;
+		link.dataset.type = "category";
+	}
+	
 	let floor = content.appendChild(document.createElement("hr"));
 	floor.classList.add("categoryFieldFloor");
 	for(let f in data.f)
@@ -421,6 +502,48 @@ function addCategoryFields(data)
 			addCategoryField(content, f, data.f[f], floor);
 		}
 	}
+	let categoryCategoriesContainer = content.appendChild(document.createElement("label"));
+	categoryCategoriesContainer.classList.add("categoryCategoriesContainer");
+	categoryCategoriesContainer.htmlFor = "categoryAddCategory";
+	categoryCategoriesContainer.label = "Use this if you want all articles in this category to also automatically belong to another category. For example: All cities are locations, so the 'City' category should be in the 'Location' category.";
+	let categoryCategoriesLabel = categoryCategoriesContainer.appendChild(document.createElement("b"));
+	categoryCategoriesLabel.innerHTML = "Categories: ";
+	let categoryCategories = categoryCategoriesContainer.appendChild(document.createElement("div"));
+	categoryCategories.classList.add("categoryCategories");
+	for(let i in data.c)
+	{
+		let link = categoryCategories.appendChild(document.createElement("a"));
+		link.href = "#"+ data.c[i];
+		link.innerHTML = Renderer.categoryIndex[data.c[i]].t;
+		link.dataset.type = "category";
+	}
+	let categoryAddCategory = categoryCategories.appendChild(document.createElement("input"));
+	categoryAddCategory.id = "categoryAddCategory";
+	categoryAddCategory.classList.add("categoryAddCategory");
+	
+	$(content).find("a[href^='#']").each((idx, node) => {
+		if($(node).data("type") == "category")
+			node.addEventListener("click", Renderer.handleCategoryLink);
+		else
+			node.addEventListener("click", Renderer.handleArticleLink);
+		if(node.hash.startsWith("##"))
+			node.classList.add("broken");
+	});
+	$(content).find(".categoryAddCategory").autocomplete({
+		source: Renderer.categoriesList,
+		delay: 0,
+	}).keydown(event => {
+		if(event.keyCode == 13)
+		{
+			ipcRenderer.send("addCategoryCategory", {
+				categoryID: data.id,
+				categoryList: data.c,
+				newTitle: event.target.value,
+			});
+			event.target.value = "";
+		}
+	});
+		
 	let add = document.createElement("input");
 	add.type = "button";
 	add.value = "Add Field";
@@ -604,28 +727,6 @@ function checkConditions(fieldContainer)
 		//if(element.namedItem(element.defaultValue))
 			element.value = element.defaultValue;
 	});
-}
-
-function addDOMElement(parent, elementData, sibling)
-{
-	let element;
-	if(sibling)
-		element = parent.insertBefore(document.createElement(elementData.tagName), sibling);
-	else
-		element = parent.appendChild(document.createElement(elementData.tagName));
-	for(let i in elementData)
-	{
-		if(i == "tagName")
-			continue;
-		else if(i == "classes")
-		{
-			if(Array.isArray(elementData[i]))
-				element.classList.add(...elementData[i]);
-		}
-		else
-			element[i] = elementData[i];
-	}
-	return element;
 }
 
 window.world = new maps.WorldMap([0,0], 2112);

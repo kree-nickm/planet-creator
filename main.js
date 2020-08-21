@@ -192,6 +192,29 @@ ipcMain.on("addArticleCategory", async (event, data) => {
 	}
 });
 
+ipcMain.on("addCategoryCategory", async (event, data) => {
+	let category;
+	for(let i in database.index.ci)
+		if(database.index.ci[i].t == data.newTitle)
+			category = i;
+	if(!category)
+		for(let i in database.index.ci)
+			if(i == data.newTitle)
+				category = i;
+	if(category)
+	{
+		let categoryList = data.categoryList;
+		if(categoryList.indexOf(category) == -1)
+		{
+			categoryList.push(category);
+			ipcMain._events.saveCategory(event, {
+				id: data.categoryID,
+				c: categoryList,
+			});
+		}
+	}
+});
+
 function sendArticles()
 {
 	listArticles();
@@ -233,6 +256,7 @@ function listCategories()
 			list.push({
 				id: i,
 				t: database.index.ci[i].t,
+				c: database.index.ci[i].c,
 			});
 		}
 		appWindows[0].webContents.send("listCategories", list);

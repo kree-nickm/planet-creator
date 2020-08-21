@@ -1,15 +1,15 @@
-{{! You must have elements with the following IDs for these purposes: "articleSaveBtn": Saves the article when clicked; "articleAddCategory": An input element that adds the article to the entered category when 'return' is pressed.}}
+{{! You must have elements with the following classes for these purposes: "articleSaveBtn": Saves the article when clicked; "articleAddCategory": An input element that adds the article to the entered category when 'return' is pressed.}}
 {{#each categories}}
 {{> (categoryPartial id) }}
 {{/each}}
 <hr/>
 <button class="articleSaveBtn">Save Article</button>
-<div class="articleCategoriesContainer">
+<label for="articleAddCategory" class="articleCategoriesContainer">
 	<b>Categories: </b>
-	<label class="articleCategories" for="articleAddCategory">
+	<div class="articleCategories">
 		{{#each categories}}
 		{{#if actual}}{{#unlesseq id "*"}}<a href="#{{id}}" data-type="category">{{title}}</a>{{/unlesseq}}{{/if}}
 		{{/each}}
 		<input id="articleAddCategory" class="articleAddCategory"/>
-	</label>
-</div>
+	</div>
+</label>

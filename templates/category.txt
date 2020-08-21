@@ -1,0 +1,31 @@
+{{! This template is a work-in-progress and is not currently used.}}
+{{#if data.id}}
+<h1>{{#if data.t}}{{data.t}}{{else}}{{data.id}}{{/if}}</h1>
+{{else}}
+<input value="" type="text" id="categoryTitle" placeholder="Category Title"/>
+{{/if}}
+{{#each data.f as |field fieldId|}}
+<table>
+	<caption>
+		<input class="categoryIDField" id="{{fieldId}}_id" value="{{fieldId}}" name="id" placeholder="Unique Identifier"/>
+		<button class="categoryFieldRemoveBtn">X</button>
+	</caption>
+	<tbody>
+	{{#each ../options as |option optionId|}}
+		<tr class="categoryFieldOptionContainer">
+			<th><label for="{{fieldId}}_{{optionId}}">{{label}}:</label></th>
+			<td>
+			{{#ifeq type "select"}}
+			<select>
+			</select>
+			{{else}}
+			{{/ifeq}}
+			</td>
+		</tr>
+	{{/each}}
+	</tbody>
+</table>
+{{/each}}
+<hr/>
+<button class="categoryFieldAddBtn">Add Field</button>
+<button class="categorySaveBtn">Save Category</button>

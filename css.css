@@ -109,6 +109,7 @@ h1 {
 
 .articleCategoriesContainer {
 	display: flex;
+	cursor: text;
 }
 
 .articleCategoriesContainer b {
@@ -123,7 +124,6 @@ h1 {
 	border: 1px solid black;
 	border-radius: 0.8ex;
 	padding: 0.1em 0.1em;
-	cursor: text;
 }
 
 .articleCategoriesContainer .articleCategories a {
@@ -209,6 +209,38 @@ textarea.categoryDataEdit {
 	height: 10em;
 	width: 100%;
 	box-sizing: border-box;
+}
+
+.categoryCategoriesContainer {
+	display: flex;
+	cursor: text;
+}
+
+.categoryCategoriesContainer b {
+	flex: 0 0 auto;
+	margin-right: 1ex;
+	line-height: calc(1.4em + 2px + 0.2em);
+}
+
+.categoryCategoriesContainer .categoryCategories {
+	flex: 1 1 auto;
+	display: flex;
+	border: 1px solid black;
+	border-radius: 0.8ex;
+	padding: 0.1em 0.1em;
+}
+
+.categoryCategoriesContainer .categoryCategories a {
+	flex: 0 0 auto;
+	margin: 0.12em;
+	padding: 0.05em;
+	font-size: 0.9em;
+}
+
+.categoryCategoriesContainer .categoryCategories .categoryAddCategory {
+	flex: 1 0 auto;
+	border: 0px;
+	outline: 0px;
 }
 
 /*

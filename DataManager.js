@@ -220,6 +220,8 @@ module.exports = function(){
 				metaJSON[finalID].t = data.t;
 			if(data.f)
 				metaJSON[finalID].f = data.f;
+			if(data.c)
+				metaJSON[finalID].c = data.c;
 		}
 		else
 		{
@@ -254,13 +256,24 @@ module.exports = function(){
 		if(!metaJSON[finalID].a)
 			metaJSON[finalID].a = metaJSON[finalID].z;
 		
+		if(!metaJSON[finalID].c)
+			metaJSON[finalID].c = []
+		for(let i=0; i<metaJSON[finalID].c.length; i++)
+		{
+			for(let k in this.index.ci[metaJSON[finalID].c[i]].c)
+			{
+				if(metaJSON[finalID].c.indexOf(this.index.ci[metaJSON[finalID].c[i]].c[k]) == -1)
+					metaJSON[finalID].c.push(this.index.ci[metaJSON[finalID].c[i]].c[k]);
+			}
+		}
+		
 		// Handle fields that get saved to a file.
 		if(category)
 		{
 			if(finalID == "*")
 				this.verifyData(metaJSON[finalID], this.minimumDefaultCategory);
 			if(metaFile)
-				index[finalID] = {f:metaFile,t:metaJSON[finalID].t};
+				index[finalID] = {f:metaFile,t:metaJSON[finalID].t,c:metaJSON[finalID].c};
 		}
 		else
 		{

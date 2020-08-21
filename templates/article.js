@@ -49,7 +49,7 @@ module.exports={"1":function(container,depth0,helpers,partials,data) {
     };
 
   return ((stack1 = lookupProperty(helpers,"each").call(alias1,(depth0 != null ? lookupProperty(depth0,"categories") : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":2,"column":0},"end":{"line":4,"column":9}}})) != null ? stack1 : "")
-    + "<hr/>\n<button class=\"articleSaveBtn\">Save Article</button>\n<div class=\"articleCategoriesContainer\">\n	<b>Categories: </b>\n	<label class=\"articleCategories\" for=\"articleAddCategory\">\n"
+    + "<hr/>\n<button class=\"articleSaveBtn\">Save Article</button>\n<label for=\"articleAddCategory\" class=\"articleCategoriesContainer\">\n	<b>Categories: </b>\n	<div class=\"articleCategories\">\n"
     + ((stack1 = lookupProperty(helpers,"each").call(alias1,(depth0 != null ? lookupProperty(depth0,"categories") : depth0),{"name":"each","hash":{},"fn":container.program(3, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":10,"column":2},"end":{"line":12,"column":11}}})) != null ? stack1 : "")
-    + "		<input id=\"articleAddCategory\" class=\"articleAddCategory\"/>\n	</label>\n</div>";
+    + "		<input id=\"articleAddCategory\" class=\"articleAddCategory\"/>\n	</div>\n</label>";
 },"usePartial":true,"useData":true}
