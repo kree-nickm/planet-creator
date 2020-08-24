@@ -10,6 +10,7 @@ for(let i in customHelpers)
 	Handlebars.registerHelper(customHelpers[i].tag, customHelpers[i].fn);
 
 const Renderer = new (function(){
+	this.theme = "default";
 	this.categoriesList = [];
 	this.articleIndex = {};
 	this.categoryIndex = {};
@@ -132,16 +133,16 @@ const Renderer = new (function(){
 			// Determine template file for this category.
 			let templateFile;
 			if(c == "*")
-				templateFile = "templates/article.global.category.js";
+				templateFile = "templates/"+ this.theme +"/article.all.articles.js";
 			else
-				templateFile = "templates/article."+ c +".js";
+				templateFile = "templates/"+ this.theme +"/article."+ c +".js";
 			
 			// Register partial template from above file
 			let partial;
 			if(fs.existsSync(templateFile))
 				partial = Handlebars.template(require("./"+ templateFile));
 			else
-				partial = Handlebars.template(require("./templates/article.default.category.js"));
+				partial = Handlebars.template(require("./templates/"+ this.theme +"/article.default.category.js"));
 			Handlebars.registerPartial("article."+c, partial);
 			
 			// Build data to send to template.
@@ -198,7 +199,7 @@ const Renderer = new (function(){
 					fieldData.valueParsed = data.f[c][f+':Markdown'];
 			}
 		}
-		let template = Handlebars.template(require("./templates/article.js"));
+		let template = Handlebars.template(require("./templates/"+ this.theme +"/article.js"));
 		content.append(template(templateData));
 		content.find(".articleDataContainer .articleDataEdit").each((index, element) => {
 			if($(element).val() == "")
@@ -251,7 +252,7 @@ const Renderer = new (function(){
 			options: this.categoryFieldOptions,
 			data: data,
 		};
-		let template = Handlebars.template(require("./templates/category.js"));
+		let template = Handlebars.template(require("./templates/"+ this.theme +"/category.js"));
 		content.append(template(templateData));
 		
 		// Add dynamic stuff.

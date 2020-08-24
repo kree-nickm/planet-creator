@@ -8,29 +8,36 @@ const Handlebars = require('handlebars');
 
 async function compileHandlebarTemplates()
 {
-	let files = await fs.promises.readdir("templates");
-	for(let i in files)
+	let themes = await fs.promises.readdir("templates");
+	for(let i in themes)
 	{
-		if(path.extname(files[i]).toLowerCase() == ".txt")
+		if((await fs.promises.stat("templates" + path.sep + themes[i])).isDirectory())
 		{
-			let tFile = "templates" + path.sep + files[i];
-			let cFile = "templates" + path.sep + path.basename(files[i],".txt") + ".js";
-			let tStat = await fs.promises.stat(tFile);
-			let tModTime = tStat.mtimeMs;
-			let cModTime;
-			try
+			let files = await fs.promises.readdir("templates" + path.sep + themes[i]);
+			for(let k in files)
 			{
-				let cStat = await fs.promises.stat(cFile);
-				cModTime = cStat.mtimeMs;
-			}
-			catch(err)
-			{
-				cModTime = 0;
-			}
-			if(cModTime < tModTime)
-			{
-				let input = await fs.promises.readFile(tFile, {encoding:"utf-8"});
-				await fs.promises.writeFile(cFile, "module.exports="+Handlebars.precompile(input));
+				if(path.extname(files[k]).toLowerCase() == ".html")
+				{
+					let tFile = "templates" + path.sep + themes[i] + path.sep + files[k];
+					let cFile = "templates" + path.sep + themes[i] + path.sep + path.basename(files[k],".html") + ".js";
+					let tStat = await fs.promises.stat(tFile);
+					let tModTime = tStat.mtimeMs;
+					let cModTime;
+					try
+					{
+						let cStat = await fs.promises.stat(cFile);
+						cModTime = cStat.mtimeMs;
+					}
+					catch(err)
+					{
+						cModTime = 0;
+					}
+					if(cModTime < tModTime)
+					{
+						let input = await fs.promises.readFile(tFile, {encoding:"utf-8"});
+						await fs.promises.writeFile(cFile, "module.exports="+Handlebars.precompile(input));
+					}
+				}
 			}
 		}
 	}
