@@ -127,23 +127,30 @@ const Renderer = new (function(){
 		let templateData = {
 			categories: [],
 		};
-		// TODO: Show orphaned fields (if a category is removed from an article when it still had fields filled in, those are now orphaned.
+		// TODO: Show orphaned fields (if a category is removed from an article when it still had fields filled in, those are now orphaned).
 		for(let c in data.categories)
 		{
 			// Determine template file for this category.
 			let templateFile;
 			if(c == "*")
-				templateFile = "templates/"+ this.theme +"/article.all.articles.js";
+				templateFile = "article.all.articles.js";
 			else
-				templateFile = "templates/"+ this.theme +"/article."+ c +".js";
+				templateFile = "article."+ c +".js";
+			let templateFilePath = "templates/"+ this.theme +"/" + templateFile;
+			if(!fs.existsSync(templateFilePath))
+				templateFilePath = "templates/"+ this.theme +"/article.default.category.js";
+			if(!fs.existsSync(templateFilePath))
+			{
+				templateFilePath = "templates/default/" + templateFile;
+				if(!fs.existsSync(templateFilePath))
+					templateFilePath = "templates/default/article.default.category.js";
+			}
 			
 			// Register partial template from above file
-			let partial;
-			if(fs.existsSync(templateFile))
-				partial = Handlebars.template(require("./"+ templateFile));
+			if(fs.existsSync(templateFilePath))
+				Handlebars.registerPartial("article."+c, Handlebars.template(require("./"+ templateFilePath)));
 			else
-				partial = Handlebars.template(require("./templates/"+ this.theme +"/article.default.category.js"));
-			Handlebars.registerPartial("article."+c, partial);
+				console.error("Unable to load a template for this article.", data);
 			
 			// Build data to send to template.
 			let templateFieldData = {
@@ -199,7 +206,10 @@ const Renderer = new (function(){
 					fieldData.valueParsed = data.f[c][f+':Markdown'];
 			}
 		}
-		let template = Handlebars.template(require("./templates/"+ this.theme +"/article.js"));
+		let mainTemplateFile = "templates/"+ this.theme +"/article.js";
+		if(!fs.existsSync(mainTemplateFile))
+			mainTemplateFile = "templates/default/article.js";
+		let template = Handlebars.template(require("./"+ mainTemplateFile));
 		content.append(template(templateData));
 		content.find(".articleDataContainer .articleDataEdit").each((index, element) => {
 			if($(element).val() == "")
@@ -252,7 +262,10 @@ const Renderer = new (function(){
 			options: this.categoryFieldOptions,
 			data: data,
 		};
-		let template = Handlebars.template(require("./templates/"+ this.theme +"/category.js"));
+		let mainTemplateFile = "templates/"+ this.theme +"/category.js";
+		if(!fs.existsSync(mainTemplateFile))
+			mainTemplateFile = "templates/default/category.js";
+		let template = Handlebars.template(require("./"+ mainTemplateFile));
 		content.append(template(templateData));
 		
 		// Add dynamic stuff.
