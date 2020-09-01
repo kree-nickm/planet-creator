@@ -93,7 +93,7 @@ module.exports = {
 		}
 		
 		content.find(".categoryFieldAddBtn").click(event => {
-			addCategoryField($(".categoryIDField").size(), {});
+			addCategoryField($(".categoryIDField").length, {});
 		});
 		
 		content.find(".categoryAddCategory").autocomplete({
@@ -140,7 +140,7 @@ module.exports = {
 							newData.f[field][elem.name] = elem.value;
 					}
 				});
-				this.send("saveCategory", newData);
+				Renderer.send("saveCategory", newData);
 			}
 		});
 	},
