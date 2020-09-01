@@ -1,0 +1,28 @@
+{{#if data.id}}
+<link rel="stylesheet" href="themes/default/category.css"/>
+<h1>Category: {{#if data.t}}{{data.t}}{{else}}{{data.id}}{{/if}}</h1>
+{{else}}
+<input value="" type="text" id="categoryTitle" placeholder="Category Title"/>
+{{/if}}
+<div>
+{{#each articleChildren}}
+<a href="#{{id}}">{{t}}</a>
+{{/each}}
+</div>
+<div>
+{{#each categoryChildren}}
+<a href="#{{id}}">{{t}}</a>
+{{/each}}
+</div>
+<hr id="categoryFieldFloor"/>
+<label for="categoryAddCategory" class="categoryCategoriesContainer" title="Use this if you want all articles in this category to also automatically belong to another category. For example: All cities are locations, so the 'City' category should be in the 'Location' category.">
+	<b>Categories: </b>
+	<div class="categoryCategories">
+		{{#each categories}}
+		{{#unlesseq id "*"}}<a href="#{{id}}" data-type="category">{{title}}</a>{{/unlesseq}}
+		{{/each}}
+		<input id="categoryAddCategory" class="categoryAddCategory"/>
+	</div>
+</label>
+<button class="categoryFieldAddBtn">Add Field</button>
+<button class="categorySaveBtn">Save Category</button>

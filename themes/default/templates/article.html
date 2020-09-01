@@ -1,10 +1,8 @@
-{{! You must have elements with the following classes for these purposes: "articleSaveBtn": Saves the article when clicked; "articleAddCategory": An input element that adds the article to the entered category when 'return' is pressed.}}
-<link rel="stylesheet" href="templates/default/article.css"/>
+<link rel="stylesheet" href="themes/default/article.css"/>
 {{#each categories}}
 {{> (categoryPartial id) }}
 {{/each}}
 <hr/>
-<button class="articleSaveBtn">Save Article</button>
 <label for="articleAddCategory" class="articleCategoriesContainer">
 	<b>Categories: </b>
 	<div class="articleCategories">
@@ -14,3 +12,4 @@
 		<input id="articleAddCategory" class="articleAddCategory"/>
 	</div>
 </label>
+<button class="articleSaveBtn">Save Article</button>

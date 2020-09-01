@@ -43,4 +43,32 @@ module.exports = [
 				return options.inverse(this);
 		},
 	},
+	{
+		tag: "iftype",
+		fn: function(variable, value, options) {
+			if(arguments.length != 3)
+			{
+				console.error('#iftype requires exactly two arguments');
+				return "";
+			}
+			if(typeof(variable) == value)
+				return options.fn(this);
+			else
+				return options.inverse(this);
+		},
+	},
+	{
+		tag: "unlesstype",
+		fn: function(variable, value, options) {
+			if(arguments.length != 3)
+			{
+				console.error('#unlesstype requires exactly two arguments');
+				return "";
+			}
+			if(typeof(variable) != value)
+				return options.fn(this);
+			else
+				return options.inverse(this);
+		},
+	},
 ];

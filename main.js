@@ -8,18 +8,18 @@ const Handlebars = require('handlebars');
 
 async function compileHandlebarTemplates()
 {
-	let themes = await fs.promises.readdir("templates");
+	let themes = await fs.promises.readdir("themes");
 	for(let i in themes)
 	{
-		if((await fs.promises.stat("templates" + path.sep + themes[i])).isDirectory())
+		if((await fs.promises.stat("themes" + path.sep + themes[i])).isDirectory() && (await fs.promises.stat("themes" + path.sep + themes[i] + path.sep + "templates")).isDirectory())
 		{
-			let files = await fs.promises.readdir("templates" + path.sep + themes[i]);
+			let files = await fs.promises.readdir("themes" + path.sep + themes[i] + path.sep + "templates");
 			for(let k in files)
 			{
 				if(path.extname(files[k]).toLowerCase() == ".html")
 				{
-					let tFile = "templates" + path.sep + themes[i] + path.sep + files[k];
-					let cFile = "templates" + path.sep + themes[i] + path.sep + path.basename(files[k],".html") + ".js";
+					let tFile = "themes" + path.sep + themes[i] + path.sep + "templates" + path.sep + files[k];
+					let cFile = "themes" + path.sep + themes[i] + path.sep + "templates" + path.sep + path.basename(files[k],".html") + ".js";
 					let tStat = await fs.promises.stat(tFile);
 					let tModTime = tStat.mtimeMs;
 					let cModTime;

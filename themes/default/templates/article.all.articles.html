@@ -1,5 +1,5 @@
 {{#each fields}}
-<div class="articleDataContainer reading">
+<div class="articleDataContainer {{#ifeq value ""}}editing{{else}}reading{{/ifeq}}">
 {{#ifeq type "select"}}
 	<select class="articleDataEdit" data-category="{{../id}}" data-field="{{field}}" title="{{description}}">
 		<option value="">Select {{name}}...</option>
@@ -12,11 +12,17 @@
 {{else}}
 	<input type="{{type}}" value="{{value}}" placeholder="{{name}}" class="articleDataEdit" data-category="{{../id}}" data-field="{{field}}" title="{{description}}"/>
 {{/ifeq}}
-{{#unlesseq type "hidden"}}
+{{#ifeq type "hidden"}}
+{{else ifeq field "t"}}
+	<div class="articleDataRead">
+		<button class="edit">edit</button>
+		<h1>{{{valueParsed}}}</h1>
+	</div>
+{{else}}
 	<div class="articleDataRead">
 		<button class="edit">edit</button>
 		<span>{{{valueParsed}}}</span>
 	</div>
-{{/unlesseq}}
+{{/ifeq}}
 </div>
 {{/each}}

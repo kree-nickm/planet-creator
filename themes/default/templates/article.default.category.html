@@ -1,6 +1,5 @@
-<h2>Location Data</h2>
 {{#each fields}}
-<div class="articleDataContainer reading">
+<div class="articleDataContainer {{#ifeq value ""}}editing{{else}}reading{{/ifeq}}">
 {{#ifeq type "select"}}
 	<select class="articleDataEdit" data-category="{{../id}}" data-field="{{field}}" title="{{description}}">
 		<option value="">Select {{name}}...</option>
