@@ -15,6 +15,8 @@ const Renderer = new (function(){
 	this.articleIndex = {};
 	this.categoryIndex = {};
 	this.stringCollator = new Intl.Collator("en");
+	this.handlebarsTemplates = {};
+	this.requiredFiles = {};
 	this.categoryFieldOptions = {
 		'n': {
 			type: "text",
@@ -31,7 +33,6 @@ const Renderer = new (function(){
 				"date": "Date",
 				"datetime-local": "Date and Time",
 				"file": "File of Specified Type",
-				"url": "URL",
 				"select": "Predefined Options",
 			},
 		},
@@ -80,6 +81,14 @@ const Renderer = new (function(){
 				}
 			},
 		},
+		'a': {
+			condition: function(fieldContainer){
+				let type = $(fieldContainer).find(".field-t").val();
+				return type == "file" || type == "select";
+			},
+			type: "checkbox",
+			label: "Allow Multiple",
+		},
 		'm': {
 			condition: function(fieldContainer){
 				let type = $(fieldContainer).find(".field-t").val();
@@ -102,6 +111,41 @@ const Renderer = new (function(){
 	{
 		ipcRenderer.send(channel, data);
 	}
+	
+	this.loadTemplate = function(templateFile)
+	{
+		let module = this.requireFile(templateFile, true);
+		if(!this.handlebarsTemplates[templateFile] || module.time > this.handlebarsTemplates[templateFile].time)
+		{
+			this.handlebarsTemplates[templateFile] = {
+				template: Handlebars.template(module.module),
+				time: module.time,
+			};
+		}
+		return this.handlebarsTemplates[templateFile].template;
+	};
+	
+	this.requireFile = function(nodeFile, withTime)
+	{
+		if(fs.existsSync(nodeFile))
+		{
+			let stat = fs.statSync(nodeFile);
+			let modTime = stat.mtimeMs;
+			if(!this.requiredFiles[nodeFile] || modTime > this.requiredFiles[nodeFile])
+			{
+				let resolve = require.resolve("./"+ nodeFile);
+				if(require.cache[resolve])
+					delete require.cache[resolve];
+				this.requiredFiles[nodeFile] = modTime;
+			}
+			if(withTime)
+				return {module:require("./"+ nodeFile), time:this.requiredFiles[nodeFile]};
+			else
+				return require("./"+ nodeFile);
+		}
+		else
+			throw "Tried to load non-existent Node.js file '"+ nodeFile +"'.";
+	};
 	
 	this.handleArticleLink = function(event)
 	{
@@ -157,9 +201,9 @@ const Renderer = new (function(){
 			// Register partial template from above file, and check for template scripts.
 			if(fs.existsSync(templateFilePath))
 			{
-				Handlebars.registerPartial("article."+c, Handlebars.template(require("./"+ templateFilePath)));
+				Handlebars.registerPartial("article."+c, this.loadTemplate(templateFilePath));
 				if(!scripts[theme] && fs.existsSync("themes/"+ theme +"/scripts.js"))
-					scripts[theme] = require("./themes/"+ theme +"/scripts.js");
+					scripts[theme] = this.requireFile("./themes/"+ theme +"/scripts.js");
 			}
 			else
 				console.error("Unable to load a template for this article.", data);
@@ -221,7 +265,7 @@ const Renderer = new (function(){
 		let mainTemplateFile = "themes/"+ this.theme +"/templates/article.js";
 		if(!fs.existsSync(mainTemplateFile))
 			mainTemplateFile = "themes/default/templates/article.js";
-		let template = Handlebars.template(require("./"+ mainTemplateFile));
+		let template = this.loadTemplate(mainTemplateFile);
 		content.append(template(templateData));
 		
 		// Add dynamic stuff.
@@ -256,10 +300,10 @@ const Renderer = new (function(){
 		{
 			mainTemplateFile = "themes/default/templates/category.js";
 			if(!scripts["default"] && fs.existsSync("themes/default/scripts.js"))
-				scripts["default"] = require("./themes/default/scripts.js");
+				scripts["default"] = this.requireFile("./themes/default/scripts.js");
 		}
 		else if(!scripts[this.theme] && fs.existsSync("themes/"+ this.theme +"/scripts.js"))
-			scripts[this.theme] = require("./themes/"+ this.theme +"/scripts.js");
+			scripts[this.theme] = this.requireFile("./themes/"+ this.theme +"/scripts.js");
 		
 		for(let a in Renderer.articleIndex)
 		{
@@ -289,7 +333,7 @@ const Renderer = new (function(){
 				scripts[t].beforeCategoryContent(content, data);
 		}
 		
-		let template = Handlebars.template(require("./"+ mainTemplateFile));
+		let template = this.loadTemplate(mainTemplateFile);
 		content.append(template(templateData));
 		
 		for(let t in scripts)

@@ -66,3 +66,21 @@
 	border: 0px;
 	outline: 0px;
 }
+
+.category .field-t {
+	font-size: 2em;
+	font-weight: bold;
+}
+
+#contextmenu {
+	display: none;
+	position: absolute;
+}
+
+#contextmenu.showing {
+	display: inline-block;
+}
+
+#contextmenu:not(.field) #contextmenuEdit {
+	display: none;
+}

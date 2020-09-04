@@ -120,6 +120,7 @@ ipcMain.on("loadArticle", async (event, findData) => {
 		}
 		appWindows[0].webContents.send("loadArticle", (findData.id?findData.id:""), data, bonusData, categories);
 		prefs.lastArticle = findData;
+		prefs.lastView = "articles";
 		database.saveJSON("prefs.json", prefs);
 	}
 	else
@@ -164,6 +165,7 @@ ipcMain.on("loadCategory", async (event, findData) => {
 		// Don't modify `data` past this point, since it might be a reference to the saved index object, which we do not want to arbitrarily modify.
 		appWindows[0].webContents.send("loadCategory", (findData.id?findData.id:""), data);
 		prefs.lastCategory = findData;
+		prefs.lastView = "categories";
 		database.saveJSON("prefs.json", prefs);
 	}
 	else
@@ -220,6 +222,10 @@ ipcMain.on("addCategoryCategory", async (event, data) => {
 			});
 		}
 	}
+});
+
+ipcMain.on("inspect", (event, data) => {
+	appWindows[0].webContents.inspectElement(Math.round(data.left), Math.round(data.top));
 });
 
 function sendArticles()
@@ -512,6 +518,15 @@ async function createWindow()
 		accelerator: "CommandOrControl+Shift+I",
 		type: "normal",
 		click: () => {appWindows[0].webContents.openDevTools();},
+	}));
+	toolsMenu.submenu.append(new MenuItem({
+		label: "Reload Templates",
+		accelerator: "",
+		type: "normal",
+		click: async () => {
+			await compileHandlebarTemplates();
+			appWindows[0].webContents._events["dom-ready"]();
+		},
 	}));
 	menu.append(toolsMenu);
 	

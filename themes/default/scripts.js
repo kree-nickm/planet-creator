@@ -1,8 +1,33 @@
 module.exports = {
 	onArticleContentGenerated: function(content, data) {
-		content.find(".articleDataContainer .edit").click((event) => {
-			$(event.target).parents(".articleDataContainer").removeClass("reading").addClass("editing");
+		$(document).off("contextmenu").on("contextmenu", function(event){
+			console.log(event);
+			$("#contextmenu").addClass("showing").menu("refresh").offset({left:event.pageX, top:event.pageY});
+			if(!$("#contextmenu").prop("fieldAdded"))
+				$("#contextmenu").removeClass("field");
+			$("#contextmenu").prop("fieldAdded", false);
 		});
+		$(document).off("click").on("click", function(event){
+			$("#contextmenu").removeClass("showing");
+		});
+		
+		$("#contextmenu").menu();
+		content.find(".articleDataContainer").contextmenu(event => {
+			let target = $(event.currentTarget);
+			if(target.hasClass("reading"))
+			{
+				$("#contextmenu").addClass("field").prop("fieldAdded", true).prop("target", event.currentTarget);
+				$("#contextmenuEdit").find(".label").html(target.data("field-name") +" ("+ target.data("category-name") +")");
+			}
+		});
+		$("#contextmenuEdit").click(event => {
+			console.log($("#contextmenu").prop("target"));
+			$($("#contextmenu").prop("target")).removeClass("reading").addClass("editing");
+		});
+		$("#contextmenuInspect").click(event => {
+			Renderer.send("inspect", $("#contextmenu").offset());
+		});
+		
 		content.find(".articleAddCategory").autocomplete({
 			source: Renderer.categoriesList,
 			delay: 0,
@@ -12,9 +37,9 @@ module.exports = {
 				Renderer.send("addArticleCategory", {
 					articleID: data.f['*'].id,
 					categoryList: Object.keys(data.categories),
-					newTitle: event.target.value,
+					newTitle: event.currentTarget.value,
 				});
-				event.target.value = "";
+				event.currentTarget.value = "";
 			}
 		});
 		content.find(".articleSaveBtn").click(event => {
@@ -29,8 +54,7 @@ module.exports = {
 	},
 	
 	afterCategoryContent: function(content, data) {
-		if(!Renderer.custom_fieldTemplate)
-			Renderer.custom_fieldTemplate = Handlebars.template(require("./templates/category.field.js"));
+		let template = Renderer.loadTemplate("themes/default/templates/category.field.js")
 		let floor = $("#categoryFieldFloor");
 		
 		let checkConditions = function(fieldContainer) {
@@ -69,7 +93,7 @@ module.exports = {
 		};
 		
 		let addCategoryField = function(fieldId, fieldData) {
-			floor.before(Renderer.custom_fieldTemplate({
+			floor.before(template({
 				hidden: data.id == "*" && (fieldId == "id" || fieldId == "t"),
 				category: data.id,
 				options: Renderer.categoryFieldOptions,
@@ -77,10 +101,10 @@ module.exports = {
 				fieldData: fieldData,
 			}));
 			$(".categoryFieldRemoveBtn").click(event => {
-				$(event.target).parents(".categoryFieldContainer").remove();
+				$(event.currentTarget).parents(".categoryFieldContainer").remove();
 			});
 			$(".changer").change(event => {
-				checkConditions($(event.target).parents(".categoryFieldContainer")[0]);
+				checkConditions($(event.currentTarget).parents(".categoryFieldContainer")[0]);
 			});
 			$(".categoryFieldContainer").each((idx, elem) => {
 				checkConditions(elem);
@@ -105,9 +129,9 @@ module.exports = {
 				Renderer.send("addCategoryCategory", {
 					categoryID: data.id,
 					categoryList: data.c,
-					newTitle: event.target.value,
+					newTitle: event.currentTarget.value,
 				});
-				event.target.value = "";
+				event.currentTarget.value = "";
 			}
 		});
 		
