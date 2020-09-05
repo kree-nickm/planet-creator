@@ -1,31 +1,18 @@
 module.exports = {
 	onArticleContentGenerated: function(content, data) {
-		$(document).off("contextmenu").on("contextmenu", function(event){
-			console.log(event);
-			$("#contextmenu").addClass("showing").menu("refresh").offset({left:event.pageX, top:event.pageY});
-			if(!$("#contextmenu").prop("fieldAdded"))
-				$("#contextmenu").removeClass("field");
-			$("#contextmenu").prop("fieldAdded", false);
-		});
-		$(document).off("click").on("click", function(event){
-			$("#contextmenu").removeClass("showing");
-		});
-		
-		$("#contextmenu").menu();
 		content.find(".articleDataContainer").contextmenu(event => {
 			let target = $(event.currentTarget);
 			if(target.hasClass("reading"))
 			{
-				$("#contextmenu").addClass("field").prop("fieldAdded", true).prop("target", event.currentTarget);
-				$("#contextmenuEdit").find(".label").html(target.data("field-name") +" ("+ target.data("category-name") +")");
+				Renderer.addToContextMenu(
+					"pencil",
+					"Edit "+ target.data("field-name") +" ("+ target.data("category-name") +")",
+					event => {
+						target.removeClass("reading").addClass("editing");
+					},
+					true
+				);
 			}
-		});
-		$("#contextmenuEdit").click(event => {
-			console.log($("#contextmenu").prop("target"));
-			$($("#contextmenu").prop("target")).removeClass("reading").addClass("editing");
-		});
-		$("#contextmenuInspect").click(event => {
-			Renderer.send("inspect", $("#contextmenu").offset());
 		});
 		
 		content.find(".articleAddCategory").autocomplete({

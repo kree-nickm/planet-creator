@@ -12,6 +12,15 @@ h1 {
 	margin-top: 0px;
 }
 
+#contextmenu {
+	display: none;
+	position: absolute;
+}
+
+#contextmenu.showing {
+	display: inline-block;
+}
+
 /*
 	View Definitions
 */

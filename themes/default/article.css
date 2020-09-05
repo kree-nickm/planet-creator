@@ -71,16 +71,3 @@
 	font-size: 2em;
 	font-weight: bold;
 }
-
-#contextmenu {
-	display: none;
-	position: absolute;
-}
-
-#contextmenu.showing {
-	display: inline-block;
-}
-
-#contextmenu:not(.field) #contextmenuEdit {
-	display: none;
-}

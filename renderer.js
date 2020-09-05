@@ -17,6 +17,7 @@ const Renderer = new (function(){
 	this.stringCollator = new Intl.Collator("en");
 	this.handlebarsTemplates = {};
 	this.requiredFiles = {};
+	this.contextMenu = [];
 	this.categoryFieldOptions = {
 		'n': {
 			type: "text",
@@ -351,7 +352,58 @@ const Renderer = new (function(){
 				node.classList.add("broken");
 		});
 	};
+	
+	this.addToContextMenu = function(icon, text, action, divider)
+	{
+		for(let i in this.contextMenu)
+		{
+			if(this.contextMenu[i].action == action)
+			{
+				this.contextMenu[i].icon = icon;
+				this.contextMenu[i].text = text;
+				return this.contextMenu.length;
+			}
+		}
+		if(this.contextMenu.length && divider)
+			this.contextMenu.push({divider: true});
+		this.contextMenu.push({icon:icon, text:text, action:action});
+		return this.contextMenu.length;
+	};
+	
+	this.showContextMenu = function(show)
+	{
+		let menu = $("#contextmenu");
+		if(show)
+		{
+			this.addToContextMenu("zoomin", "Inspect Element", event => { Renderer.send("inspect", menu.offset()); }, true);
+			menu.addClass("showing").offset({left:event.pageX, top:event.pageY}).html("");
+			for(let i in this.contextMenu)
+			{
+				if(this.contextMenu[i].divider)
+					menu.append("<li class=\"ui-state-disabled\"><hr/></li>");
+				else
+				{
+					menu.append("<li><div><span class=\"ui-icon ui-icon-"+ this.contextMenu[i].icon +"\"></span> "+ this.contextMenu[i].text +"</div></li>")
+					.children().last().click(this.contextMenu[i].action);
+				}
+			}
+			menu.menu("refresh");
+		}
+		else
+		{
+			menu.removeClass("showing");
+		}
+		this.contextMenu = [];
+	};
 })();
+
+$(document).on("contextmenu", event => {
+	Renderer.showContextMenu(true);
+});
+$(document).on("click", event => {
+	Renderer.showContextMenu(false);
+});
+$("#contextmenu").menu();
 
 ipcRenderer.on("openMap", (event, mapJSON) => {
 	window.world.load(mapJSON);
