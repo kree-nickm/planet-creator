@@ -20,7 +20,7 @@ module.exports = {
 				"trash",
 				"Remove From \""+ target.html() +"\"",
 				event => {
-					Renderer.send("editArticleCategory", {
+					Renderer.send("editCategorization", {
 						articleID: data.f['*'].id,
 						categoryList: Object.keys(data.categories),
 						removeId: target[0].hash.substring(1),
@@ -35,7 +35,7 @@ module.exports = {
 		}).keydown(event => {
 			if(event.keyCode == 13)
 			{
-				Renderer.send("editArticleCategory", {
+				Renderer.send("editCategorization", {
 					articleID: data.f['*'].id,
 					categoryList: Object.keys(data.categories),
 					newTitle: event.currentTarget.value,
@@ -121,13 +121,28 @@ module.exports = {
 			addCategoryField($(".categoryIDField").length, {});
 		});
 		
+		content.find(".categoryCategories a").contextmenu(event => {
+			let target = $(event.currentTarget);
+			Renderer.addToContextMenu(
+				"trash",
+				"Remove From \""+ target.html() +"\"",
+				event => {
+					Renderer.send("editCategorization", {
+						categoryID: data.id,
+						categoryList: data.c,
+						removeId: target[0].hash.substring(1),
+					});
+				},
+				true
+			);
+		});
 		content.find(".categoryAddCategory").autocomplete({
 			source: Renderer.categoriesList,
 			delay: 0,
 		}).keydown(event => {
 			if(event.keyCode == 13)
 			{
-				Renderer.send("addCategoryCategory", {
+				Renderer.send("editCategorization", {
 					categoryID: data.id,
 					categoryList: data.c,
 					newTitle: event.currentTarget.value,

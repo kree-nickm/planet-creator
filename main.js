@@ -210,7 +210,7 @@ ipcMain.on("deleteCategory", async (event, data) => {
 	}
 });
 
-ipcMain.on("editArticleCategory", async (event, data) => {
+ipcMain.on("editCategorization", async (event, data) => {
 	let category;
 	if(data.newTitle)
 	{
@@ -229,50 +229,48 @@ ipcMain.on("editArticleCategory", async (event, data) => {
 	if(category)
 	{
 		let categoryList = data.categoryList;
+		let saveMethod;
+		let saveObj;
+		if(data.articleID)
+		{
+			saveMethod = ipcMain._events.saveArticle;
+			saveObj = {
+				f: {'*': {id: data.articleID}},
+				c: categoryList,
+			};
+		}
+		else if(data.categoryID)
+		{
+			saveMethod = ipcMain._events.saveCategory;
+			saveObj = {
+				id: data.categoryID,
+				c: categoryList,
+			};
+		}
+		else
+		{
+			console.warn("Unable to edit categorization:", data);
+			return false;
+		}
 		if(data.removeId)
 		{
 			let i = categoryList.indexOf(category);
 			categoryList.splice(i, 1);
-			ipcMain._events.saveArticle(event, {
-				f: {'*': {id: data.articleID}},
-				c: categoryList,
-			});
+			saveMethod(event, saveObj);
+			return true;
 		}
 		else if(categoryList.indexOf(category) == -1)
 		{
 			categoryList.push(category);
-			ipcMain._events.saveArticle(event, {
-				f: {'*': {id: data.articleID}},
-				c: categoryList,
-			});
+			saveMethod(event, saveObj);
+			return true;
 		}
+		return false;
 	}
 	else
 	{
-		console.warn("Unable to edit category:", data);
-	}
-});
-
-ipcMain.on("addCategoryCategory", async (event, data) => {
-	let category;
-	for(let i in database.index.ci)
-		if(database.index.ci[i].t == data.newTitle)
-			category = i;
-	if(!category)
-		for(let i in database.index.ci)
-			if(i == data.newTitle)
-				category = i;
-	if(category)
-	{
-		let categoryList = data.categoryList;
-		if(categoryList.indexOf(category) == -1)
-		{
-			categoryList.push(category);
-			ipcMain._events.saveCategory(event, {
-				id: data.categoryID,
-				c: categoryList,
-			});
-		}
+		console.warn("Unable to edit categorization:", data);
+		return false;
 	}
 });
 
