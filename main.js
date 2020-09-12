@@ -133,6 +133,22 @@ ipcMain.on("loadArticle", async (event, findData) => {
 	}
 });
 
+ipcMain.on("deleteArticle", async (event, data) => {
+	let choice = await showMessage({
+		type: "question",
+		buttons: ["Cancel", "Delete"],
+		title: "Confirm Article Deletion",
+		message: "Are you sure you want to delete article \""+ (data.articleTitle?data.articleTitle:data.articleID) +"\"?",
+	});
+	if(choice.response == 1)
+	{
+		if(await database.deleteData(data.articleID, false))
+		{
+			sendArticles();
+		}
+	}
+});
+
 ipcMain.on("saveCategory", async (event, data) => {
 	if(database.index)
 	{
@@ -178,19 +194,51 @@ ipcMain.on("loadCategory", async (event, findData) => {
 	}
 });
 
-ipcMain.on("addArticleCategory", async (event, data) => {
+ipcMain.on("deleteCategory", async (event, data) => {
+	let choice = await showMessage({
+		type: "question",
+		buttons: ["Cancel", "Delete"],
+		title: "Confirm Category Deletion",
+		message: "Are you sure you want to delete category \""+ (data.categoryTitle?data.categoryTitle:data.categoryID) +"\"?\nNote: Articles will be unaffected.",
+	});
+	if(choice.response == 1)
+	{
+		if(await database.deleteData(data.categoryID, true))
+		{
+			sendArticles();
+		}
+	}
+});
+
+ipcMain.on("editArticleCategory", async (event, data) => {
 	let category;
-	for(let i in database.index.ci)
-		if(database.index.ci[i].t == data.newTitle)
-			category = i;
-	if(!category)
+	if(data.newTitle)
+	{
 		for(let i in database.index.ci)
-			if(i == data.newTitle)
+			if(database.index.ci[i].t == data.newTitle)
 				category = i;
+		if(!category)
+			for(let i in database.index.ci)
+				if(i == data.newTitle)
+					category = i;
+	}
+	else if(data.removeId)
+	{
+		category = data.removeId;
+	}
 	if(category)
 	{
 		let categoryList = data.categoryList;
-		if(categoryList.indexOf(category) == -1)
+		if(data.removeId)
+		{
+			let i = categoryList.indexOf(category);
+			categoryList.splice(i, 1);
+			ipcMain._events.saveArticle(event, {
+				f: {'*': {id: data.articleID}},
+				c: categoryList,
+			});
+		}
+		else if(categoryList.indexOf(category) == -1)
 		{
 			categoryList.push(category);
 			ipcMain._events.saveArticle(event, {
@@ -198,6 +246,10 @@ ipcMain.on("addArticleCategory", async (event, data) => {
 				c: categoryList,
 			});
 		}
+	}
+	else
+	{
+		console.warn("Unable to edit category:", data);
 	}
 });
 
@@ -293,6 +345,8 @@ async function showMessage(props)
 			break;
 		case "warning":
 			console.warn(props);
+			break;
+		case "question":
 			break;
 		default:
 			console.log(props);

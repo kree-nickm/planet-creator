@@ -1,5 +1,5 @@
 module.exports = {
-	onArticleContentGenerated: function(content, data) {
+	afterArticleContent: function(content, data) {
 		content.find(".articleDataContainer").contextmenu(event => {
 			let target = $(event.currentTarget);
 			if(target.hasClass("reading"))
@@ -14,14 +14,28 @@ module.exports = {
 				);
 			}
 		});
-		
+		content.find(".articleCategories a").contextmenu(event => {
+			let target = $(event.currentTarget);
+			Renderer.addToContextMenu(
+				"trash",
+				"Remove From \""+ target.html() +"\"",
+				event => {
+					Renderer.send("editArticleCategory", {
+						articleID: data.f['*'].id,
+						categoryList: Object.keys(data.categories),
+						removeId: target[0].hash.substring(1),
+					});
+				},
+				true
+			);
+		});
 		content.find(".articleAddCategory").autocomplete({
 			source: Renderer.categoriesList,
 			delay: 0,
 		}).keydown(event => {
 			if(event.keyCode == 13)
 			{
-				Renderer.send("addArticleCategory", {
+				Renderer.send("editArticleCategory", {
 					articleID: data.f['*'].id,
 					categoryList: Object.keys(data.categories),
 					newTitle: event.currentTarget.value,

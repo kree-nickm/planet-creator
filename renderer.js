@@ -266,8 +266,21 @@ const Renderer = new (function(){
 		let mainTemplateFile = "themes/"+ this.theme +"/templates/article.js";
 		if(!fs.existsSync(mainTemplateFile))
 			mainTemplateFile = "themes/default/templates/article.js";
+		
+		for(let t in scripts)
+		{
+			if(typeof(scripts[t].beforeArticleContent) == "function")
+				scripts[t].beforeArticleContent(content, data);
+		}
+		
 		let template = this.loadTemplate(mainTemplateFile);
 		content.append(template(templateData));
+		
+		for(let t in scripts)
+		{
+			if(typeof(scripts[t].afterArticleContent) == "function")
+				scripts[t].afterArticleContent(content, data);
+		}
 		
 		// Add dynamic stuff.
 		content.find("a[href^='#']").each((idx, node) => {
@@ -278,11 +291,6 @@ const Renderer = new (function(){
 			if(node.hash.startsWith("##"))
 				node.classList.add("broken");
 		});
-		for(let t in scripts)
-		{
-			if(typeof(scripts[t].onArticleContentGenerated) == "function")
-				scripts[t].onArticleContentGenerated(content, data);
-		}
 	};
 	
 	this.addCategoryFields = function(data)
@@ -455,6 +463,19 @@ ipcRenderer.on("listArticles", (event, list) => {
 				link.innerHTML = list[i].id;
 			sidebar.appendChild(link);
 			link.addEventListener("click", Renderer.handleArticleLink.bind(Renderer));
+			$(link).contextmenu(event => {
+				Renderer.addToContextMenu(
+					"trash",
+					"Delete \""+ link.innerHTML +"\"",
+					event => {
+						Renderer.send("deleteArticle", {
+							articleID: list[i].id,
+							articleTitle: list[i].t,
+						});
+					},
+					true
+				);
+			});
 		}
 	}
 });
@@ -493,6 +514,22 @@ ipcRenderer.on("listCategories", (event, list) => {
 			}
 			sidebar.appendChild(link);
 			link.addEventListener("click", Renderer.handleCategoryLink.bind(Renderer));
+			if(list[i].id != "*")
+			{
+				$(link).contextmenu(event => {
+					Renderer.addToContextMenu(
+						"trash",
+						"Delete \""+ link.innerHTML +"\"",
+						event => {
+							Renderer.send("deleteCategory", {
+								categoryID: list[i].id,
+								categoryTitle: list[i].t,
+							});
+						},
+						true
+					);
+				});
+			}
 		}
 	}
 });

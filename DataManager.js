@@ -328,6 +328,30 @@ module.exports = function(){
 		await this.saveJSON(this.indexFile, this.index);
 		return true;
 	};
+		
+	this.deleteData = async function(id, category){
+		if(category && id == "*")
+			return false;
+		let index;
+		if(category)
+			index = this.index.ci;
+		else
+			index = this.index.ai;
+		if(!index[id])
+			return false;
+		
+		let metaFile = index[id].f;
+		delete index[id];
+		
+		if(!metaFile)
+			return false;
+		let metaJSON = await this.loadJSON(metaFile);
+		delete metaJSON[id];
+		
+		await this.saveJSON(metaFile, metaJSON);
+		await this.saveJSON(this.indexFile, this.index);
+		return true;
+	};
 	
 	this.convertToID = function(string){
 		return string.toLowerCase().replace(/[ .,]/g, "_").replace(/[\\\/]/g, "-").replace(/[^-a-z0-9_]/g, "");
