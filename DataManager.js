@@ -16,7 +16,8 @@ module.exports = function(){
 		f:{
 			id:{n:"Identifier",t:"hidden"},
 			t:{n:"Title",t:"text"}
-		}
+		},
+		c:[]
 	};
 	this.minimumArticle = {
 		a:0,

@@ -448,9 +448,9 @@ ipcRenderer.on("listArticles", (event, list) => {
 	sidebar.appendChild(link);
 	link.addEventListener("click", Renderer.handleArticleLink.bind(Renderer));
 	// Add all the articles.
+	Renderer.articleIndex = {};
 	if(Array.isArray(list) && list.length)
 	{
-		Renderer.articleIndex = {};
 		list.sort(sortByTitle);
 		for(let i in list)
 		{
@@ -492,10 +492,10 @@ ipcRenderer.on("listCategories", (event, list) => {
 	sidebar.appendChild(link);
 	link.addEventListener("click", Renderer.handleCategoryLink.bind(Renderer));
 	// Add all the categories.
+	Renderer.categoriesList = [];
+	Renderer.categoryIndex = {};
 	if(Array.isArray(list) && list.length)
 	{
-		Renderer.categoriesList = [];
-		Renderer.categoryIndex = {};
 		list.sort(sortByID);
 		for(let i in list)
 		{
