@@ -87,7 +87,7 @@ module.exports = function(){
 	};
 	
 	this.saveJSON = async function(file, object){
-		return await fs.promises.writeFile(file, JSON.stringify(object));
+		return await fs.promises.writeFile(file, JSON.stringify(object, null, 4));
 	};
 	
 	this.loadData = async function(id, category){
