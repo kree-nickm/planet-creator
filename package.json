@@ -19,7 +19,7 @@
 		"pixi.js": "^5.3.3"
 	},
 	"devDependencies": {
-		"electron": "^9.1.2"
+		"electron": "^9.3.0"
 	},
 	"engines": {
 		"node": "12.x"
