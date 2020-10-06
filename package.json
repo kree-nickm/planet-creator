@@ -15,11 +15,11 @@
 		"handlebars": "^4.7.6",
 		"jquery": "^3.5.1",
 		"jquery-ui-dist": "^1.12.1",
-		"markdown-it": "^11.0.0",
+		"markdown-it": "^11.0.1",
 		"pixi.js": "^5.3.3"
 	},
 	"devDependencies": {
-		"electron": "^9.1.2"
+		"electron": "^9.3.2"
 	},
 	"engines": {
 		"node": "12.x"
